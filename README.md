@@ -2,7 +2,7 @@
 A restful http api for ansible 2.x
 
 ## What is it?
-ansible is a radically simple IT automation system [Ansible at Github] (https://github.com/ansible/ansible/) . 
+[Ansible] (https://github.com/ansible/ansible/) is a radically simple IT automation system. 
 If you are triing to use it and not like CLI mode, you can try me now. This is a http api for ansible
 
 ## how to install
