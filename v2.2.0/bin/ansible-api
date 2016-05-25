@@ -43,7 +43,7 @@ define("sign_key", "0d35e7cc927ab3184d4deae24d8db0ef")
 # script part
 
 LOG_REPORT_HANDERL = None
-VERSION = '2.0.1'
+VERSION = '2.2.0'
 
 def getmd5(str):
     m = hashlib.md5()
