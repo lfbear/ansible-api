@@ -295,7 +295,7 @@ class PlaybookHandler(tornado.web.RequestHandler):
             if k[0:2] == "v_":
                 myvars[k[2:]] = v
 
-        yml_file = options.playbook_path + yml_file + '.yml'
+        yml_file = options.playbook_path + yml_file
         if os.path.isfile(yml_file):
             reporting("playbook: {0}, host: {1}".format(
                 yml_file, hosts))
