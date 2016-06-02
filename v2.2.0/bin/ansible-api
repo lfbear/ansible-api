@@ -1,8 +1,9 @@
 #!/usr/bin/env python
 # coding: utf-8
 
-# A restful HTTP API by python for ansible 
-# Base on ansible 2.2.0(https://github.com/lfbear/ansible-api)
+# A restful HTTP API for ansible by tornado
+# Base on ansible 2.2.0
+# Github <https://github.com/lfbear/ansible-api>
 # Author: lfbear
 # Version: 2.2.0 2016.5.25
 from __future__ import (print_function)
@@ -38,12 +39,13 @@ define("api_port", 8765)
 define("script_path", "/etc/ansible/data/scripts/")
 define("playbook_path", "/etc/ansible/playbook/")
 define("authkeys_path", "/etc/ansible/data/operation/authorized_keys/")
-define("sign_key", "0d35e7cc927ab3184d4deae24d8db0ef")
+define("sign_key", "YOUR_RANDOM_STRING_KEY_HERE")
 
 # script part
 
 LOG_REPORT_HANDERL = None
 VERSION = '2.2.0'
+
 
 def getmd5(str):
     m = hashlib.md5()
@@ -132,7 +134,7 @@ class FileRWHandler(tornado.web.RequestHandler):
             self.write("Sign is error")
         else:
             file_path = eval('options.' + path + '_path') + filename
-            if path == 'authkeys':  # 仅该模式下允许新建目录
+            if path == 'authkeys':  # allow mkdir in this mode
                 dir_name = os.path.dirname(file_path)
                 os.path.isdir(dir_name) == False and os.mkdir(dir_name)
             file_object = open(file_path, 'w')
@@ -193,10 +195,6 @@ class ParseVarsFromFile(tornado.web.RequestHandler):
 
 class CommandHandler(tornado.web.RequestHandler):
 
-    # def initialize(self):
-    #     self.set_header("Server", "Ansible Api Server/0.1")
-    #     self.set_header("Powered By", "Tornado")
-
     def get(self):
         self.write("Forbidden in get method")
 
@@ -209,8 +207,10 @@ class CommandHandler(tornado.web.RequestHandler):
         target = data['t']
         sign = data['s']
         sudo = True if data['r'] else False
+        forks = data.get('c', 50)
         cmdinfo = arg.split(' ', 1)
-        reporting('run: {0}, {1}, {2}, {3}'.format(target, module, arg, sudo))
+        reporting('run: {0}, {1}, {2}, {3}, {4}'.format(
+            target, module, arg, sudo, forks))
         hotkey = module + target + options.sign_key
         check_str = getmd5(hotkey)
         if sign != check_str:
@@ -229,7 +229,7 @@ class CommandHandler(tornado.web.RequestHandler):
                                                  'become_user', 'verbosity', 'check'])
                 pb_options = Options(listtags=False, listtasks=False,
                                      listhosts=False, syntax=False, connection='ssh',
-                                     module_path=None, forks=100, remote_user='ansible',
+                                     module_path=None, forks=forks, remote_user='ansible',
                                      private_key_file=None, ssh_common_args=None,
                                      ssh_extra_args=None, sftp_extra_args=None, scp_extra_args=None,
                                      become=sudo, become_method='sudo', become_user='root',
@@ -241,7 +241,6 @@ class CommandHandler(tornado.web.RequestHandler):
                 inventory = Inventory(
                     loader=loader, variable_manager=variable_manager)
                 variable_manager.set_inventory(inventory)
-                #variable_manager.extra_vars = {'hosts': 'mywebserver'}
 
                 # create play with tasks
                 play_source = dict(
@@ -254,7 +253,7 @@ class CommandHandler(tornado.web.RequestHandler):
                 )
                 play = Play().load(play_source, variable_manager=variable_manager, loader=loader)
 
-                cb = CallbackModule()  # (Display(verbosity=2))
+                cb = CallbackModule()
                 tqm = None
                 try:
                     tqm = TaskQueueManager(
@@ -280,6 +279,7 @@ class PlaybookHandler(tornado.web.RequestHandler):
         hosts = data['h']
         sign = data['s']
         yml_file = data['f']
+        forks = data.get('c', 50)
         if not hosts or not yml_file or not sign:
             self.write("Lack of necessary parameters")
             return False
@@ -290,15 +290,15 @@ class PlaybookHandler(tornado.web.RequestHandler):
             return False
 
         myvars = {'hosts': hosts}
-        # 注入其他模板变量(规范:post数据中所有以v_开头的变量)
+        # injection vars in playbook (rule: vars start with "v_" in post data)
         for(k, v) in data.items():
             if k[0:2] == "v_":
                 myvars[k[2:]] = v
 
         yml_file = options.playbook_path + yml_file
         if os.path.isfile(yml_file):
-            reporting("playbook: {0}, host: {1}".format(
-                yml_file, hosts))
+            reporting("playbook: {0}, host: {1}, forks: {2}".format(
+                yml_file, hosts, forks))
             # initialize needed objects
             variable_manager = VariableManager()
             loader = DataLoader()
@@ -309,7 +309,7 @@ class PlaybookHandler(tornado.web.RequestHandler):
                                              'become_user', 'verbosity', 'check'])
             pb_options = Options(listtags=False, listtasks=False,
                                  listhosts=False, syntax=False, connection='ssh',
-                                 module_path=None, forks=100, remote_user='ansible',
+                                 module_path=None, forks=forks, remote_user='ansible',
                                  private_key_file=None, ssh_common_args=None,
                                  ssh_extra_args=None, sftp_extra_args=None, scp_extra_args=None,
                                  become=True, become_method='sudo', become_user='root',
@@ -325,9 +325,10 @@ class PlaybookHandler(tornado.web.RequestHandler):
             pbex = PlaybookExecutor(playbooks=[yml_file],
                                     inventory=inventory, variable_manager=variable_manager, loader=loader,
                                     options=pb_options, passwords=passwords)
-            rc = pbex.run()  # 返回的结果是数字，不同的结果对应不同的数字
+            rc = pbex.run()
             # print((pbex._tqm._prst))
             pbex._tqm._stdout_callback = CallbackModule()
+            # parse result detail
             d = DetailProcess(pbex._tqm._prst)
             self.write({'rc': rc, 'detail': d.run()})
 
@@ -360,4 +361,3 @@ if __name__ == "__main__":
     finally:
         if LOG_REPORT_HANDERL:
             LOG_REPORT_HANDERL.close()
-
