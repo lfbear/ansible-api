@@ -5,7 +5,7 @@
 # Base on ansible 2.2.0
 # Github <https://github.com/lfbear/ansible-api>
 # Author: lfbear
-# Version: 2.2.1 at 2016.7.7
+# Version: 2.2.1 at 2016.7.11
 from __future__ import (print_function)
 
 import os
@@ -26,12 +26,12 @@ import ansibleapi2
 
 # config part
 
-define("api_host", "172.18.8.13")
+define("api_host", "127.0.0.1")
 define("api_port", 8765)
 define("script_path", "/etc/ansible/data/scripts/")
 define("playbook_path", "/etc/ansible/playbook/")
 define("authkeys_path", "/etc/ansible/data/operation/authorized_keys/")
-define("sign_key", "430915604dca6ed23450260c968eb4a8")
+define("sign_key", "YOUR_SIGNATURE_KEY_HERE")
 
 # script part
 
@@ -214,10 +214,14 @@ class CommandHandler(tornado.web.RequestHandler):
             if cmdinfo[0] in badcmd:
                 self.write("This is danger shell(" + cmdinfo[0] + ")")
             else:
-                aa2 = ansibleapi2.AnsibleApi2()
-                response = aa2.runCmd(target, module, arg, sudo, forks)
-                self.write(response)
-
+                try:
+                    aa2 = ansibleapi2.AnsibleApi2()
+                    response = aa2.runCmd(target, module, arg, sudo, forks)
+                except BaseException, e:
+                    reporting("A {0} error occurs: {1}".format(type(e),e.message));
+                    self.write({ 'error': e.message })
+                else:
+                    self.write(response)
 
 class PlaybookHandler(tornado.web.RequestHandler):
 
@@ -246,9 +250,14 @@ class PlaybookHandler(tornado.web.RequestHandler):
         if os.path.isfile(yml_file):
             reporting("playbook: {0}, host: {1}, forks: {2}".format(
                 yml_file, hosts, forks))
-            aa2 = ansibleapi2.AnsibleApi2()
-            response = aa2.runPlaybook(yml_file, myvars, forks)
-            self.write(response)
+            try:
+                aa2 = ansibleapi2.AnsibleApi2()
+                response = aa2.runPlaybook(yml_file, myvars, forks)
+            except BaseException, e:
+                reporting("A {0} error occurs: {1}".format(type(e),e.message));
+                self.write({ 'error': e.message })
+            else:
+                self.write(response)
 
         else:
             self.write("yml file(" + yml_file + ") is not existed")
