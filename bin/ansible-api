@@ -2,10 +2,10 @@
 # coding: utf-8
 
 # A restful HTTP API for ansible by tornado
-# Base on ansible 2.2.0
+# Base on ansible 2.x
 # Github <https://github.com/lfbear/ansible-api>
 # Author: lfbear
-# Version: 0.1.1 at 2016.7.11
+# Version: 0.1.1 at 2016.8.17
 
 from __future__ import (print_function)
 
