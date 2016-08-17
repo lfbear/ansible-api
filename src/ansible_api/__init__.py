@@ -2,64 +2,93 @@
 # coding: utf-8
 
 # A restful HTTP API for ansible by tornado
-# Base on ansible 2.2.0
+# Base on ansible 2.x
 # Github <https://github.com/lfbear/ansible-api>
 # Author: lfbear
-# Version: 2.2.1 at 2016.7.11
+# Version: 0.1.1 at 2016.8.17
+
 from __future__ import (print_function)
 
 import os
-import sys
-import getopt
 import json
-import hashlib
 import time
-import re
-
-import tornado.ioloop
+import ConfigParser
 import tornado.web
-import tornado.httpserver
-from tornado.options import define, options
 from jinja2 import Environment, meta
-
-import ansibleapi2
-
-# config part
-
-define("api_host", "127.0.0.1")
-define("api_port", 8765)
-define("script_path", "/etc/ansible/data/scripts/")
-define("playbook_path", "/etc/ansible/playbook/")
-define("authkeys_path", "/etc/ansible/data/operation/authorized_keys/")
-define("sign_key", "YOUR_SIGNATURE_KEY_HERE")
-
-# script part
-
-LOG_REPORT_HANDERL = None
-VERSION = '2.2.1'
+import api4ansible2
 
 
-def getmd5(str):
-    m = hashlib.md5()
-    m.update(str)
-    return m.hexdigest()
+class Tool(object):
+    LOG_REPORT_HANDERL = None
+
+    @staticmethod
+    def getmd5(str):
+        import hashlib
+        m = hashlib.md5()
+        m.update(str)
+        return m.hexdigest()
+
+    @staticmethod
+    def reporting(str):
+        report = time.strftime('%Y-%m-%d %H:%M:%S',
+                               time.gmtime()) + ' | ' + str
+        if Tool.LOG_REPORT_HANDERL:
+            Tool.LOG_REPORT_HANDERL.write(report + "\n")
+            Tool.LOG_REPORT_HANDERL.flush()
+        else:
+            print(report)
 
 
-def reporting(str):
-    global LOG_REPORT_HANDERL
-    report = time.strftime('%Y-%m-%d %H:%M:%S', time.gmtime()) + ' | ' + str
-    if LOG_REPORT_HANDERL:
-        LOG_REPORT_HANDERL.write(report + "\n")
-        LOG_REPORT_HANDERL.flush()
-    else:
-        print(report)
+class Config(object):
+    host = '127.0.0.1'
+    port = 8765
+    sign_key = 'YOUR_SIGNATURE_KEY_HERE'
+    log_path = '/var/log/ansible-api.log'
+
+    dir_script = ''
+    dir_playbook = ''
+    dir_authkeys = ''
+
+    def __init__(self):
+        cf = ConfigParser.ConfigParser()
+
+        cf.read('/etc/ansible/api.cfg')
+        try:
+            cf.options('default')
+        except:
+            pass
+        else:
+            if (cf.get('default', 'host')):
+                self.host = cf.get('default', 'host')
+            if (cf.get('default', 'port')):
+                self.port = cf.get('default', 'port')
+            if (cf.get('default', 'sign_key')):
+                self.sign_key = cf.get('default', 'sign_key')
+            if (cf.get('default', 'log_path')):
+                self.log_path = cf.get('default', 'log_path')
+
+        try:
+            cf.options('directory')
+        except:
+            pass
+        else:
+            if (cf.get('directory', 'script')):
+                self.dir_script = cf.get('directory', 'script')
+            if (cf.get('directory', 'playbook')):
+                self.dir_playbook = cf.get('directory', 'playbook')
+            if (cf.get('directory', 'authkeys')):
+                self.dir_authkeys = cf.get('directory', 'authkeys')
+
+    @staticmethod
+    def Get(attr):
+        cfg = Config()
+        return getattr(cfg, attr, '')
 
 
 class MainHandler(tornado.web.RequestHandler):
 
     def get(self):
-        global VERSION
-        self.write("Hello, I am Ansible Api v" + VERSION)
+        self.write("Hello, I am Ansible Api")
 
 
 class FileListHandler(tornado.web.RequestHandler):
@@ -69,14 +98,14 @@ class FileListHandler(tornado.web.RequestHandler):
         sign = self.get_argument('sign', '')
         allows = ['script', 'playbook', 'authkeys']
         if path in allows:
-            hotkey = path + options.sign_key
-            check_str = getmd5(hotkey)
+            hotkey = path + Config.Get('sign_key')
+            check_str = Tool.getmd5(hotkey)
             if sign != check_str:
                 self.write("Sign is error")
             else:
-                path_var = eval('options.' + path + '_path')
+                path_var = Config.Get('dir_' + path)
                 if os.path.exists(path_var):
-                    reporting("read file list: " + path_var)
+                    Tool.reporting("read file list: " + path_var)
                     dirs = os.listdir(path_var)
                     self.write({'list': dirs})
                 else:
@@ -93,16 +122,16 @@ class FileRWHandler(tornado.web.RequestHandler):
         sign = self.get_argument('sign', '')
         allows = ['script', 'playbook', 'authkeys']
         if path in allows:
-            hotkey = path + file_name + options.sign_key
-            check_str = getmd5(hotkey)
+            hotkey = path + file_name + Config.Get('sign_key')
+            check_str = Tool.getmd5(hotkey)
             if sign != check_str:
                 self.write("Sign is error")
             else:
-                file_path = eval('options.' + path + '_path') + file_name
+                file_path = Config.Get('dir_' + path) + file_name
                 if os.path.isfile(file_path):
                     file_object = open(file_path)
                     try:
-                        reporting("read from file: " + file_path)
+                        Tool.reporting("read from file: " + file_path)
                         contents = file_object.read()
                         self.write({'content': contents})
                     finally:
@@ -121,19 +150,19 @@ class FileRWHandler(tornado.web.RequestHandler):
         if not filename or not content or not sign or path \
                 not in ['script', 'playbook', 'authkeys']:
             self.write('Lack of necessary parameters')
-        hotkey = path + filename + options.sign_key
-        check_str = getmd5(hotkey)
+        hotkey = path + filename + Config.Get('sign_key')
+        check_str = Tool.getmd5(hotkey)
         if sign != check_str:
             self.write("Sign is error")
         else:
-            file_path = eval('options.' + path + '_path') + filename
+            file_path = Config.Get('dir_' + path) + filename
             if path == 'authkeys':  # allow mkdir in this mode
                 dir_name = os.path.dirname(file_path)
                 os.path.isdir(dir_name) == False and os.mkdir(dir_name)
             file_object = open(file_path, 'w')
             file_object.write(content)
             file_object.close()
-            reporting("write to file: " + file_path)
+            Tool.reporting("write to file: " + file_path)
             self.write({'ret': True})
 
 
@@ -145,13 +174,13 @@ class FileExistHandler(tornado.web.RequestHandler):
         sign = self.get_argument('sign', '')
         allows = ['script', 'playbook']
         if path in allows:
-            hotkey = path + file_name + options.sign_key
-            check_str = getmd5(hotkey)
+            hotkey = path + file_name + Config.Get('sign_key')
+            check_str = Tool.getmd5(hotkey)
             if sign != check_str:
                 self.write("Sign is error")
             else:
-                file_path = eval('options.' + path + '_path') + file_name
-                reporting("file exist? " + file_path)
+                file_path = Config.Get('dir_' + path) + file_name
+                Tool.reporting("file exist? " + file_path)
                 if os.path.isfile(file_path):
                     self.write({'ret': True})
                 else:
@@ -165,17 +194,17 @@ class ParseVarsFromFile(tornado.web.RequestHandler):
     def get(self):
         file_name = self.get_argument('name')
         sign = self.get_argument('sign', '')
-        hotkey = file_name + options.sign_key
-        check_str = getmd5(hotkey)
+        hotkey = file_name + Config.Get('sign_key')
+        check_str = Tool.getmd5(hotkey)
         if sign != check_str:
             self.write("Sign is error")
         else:
-            file_path = options.playbook_path + file_name
+            file_path = Config.Get('dir_playbook') + file_name
             if os.path.isfile(file_path):
                 file_object = open(file_path)
                 env = Environment()
                 try:
-                    reporting("parse from file: " + file_path)
+                    Tool.reporting("parse from file: " + file_path)
                     contents = file_object.read()
                     ast = env.parse(contents)
                     var = list(meta.find_undeclared_variables(ast))
@@ -191,8 +220,6 @@ class CommandHandler(tornado.web.RequestHandler):
     def get(self):
         self.write("Forbidden in get method")
 
-    #@tornado.web.asynchronous
-    #@tornado.gen.engine
     def post(self):
         data = json.loads(self.request.body)
         badcmd = ['reboot', 'su', 'sudo', 'dd',
@@ -204,10 +231,10 @@ class CommandHandler(tornado.web.RequestHandler):
         sudo = True if data['r'] else False
         forks = data.get('c', 50)
         cmdinfo = arg.split(' ', 1)
-        reporting('run: {0}, {1}, {2}, {3}, {4}'.format(
+        Tool.reporting('run: {0}, {1}, {2}, {3}, {4}'.format(
             target, module, arg, sudo, forks))
-        hotkey = module + target + options.sign_key
-        check_str = getmd5(hotkey)
+        hotkey = module + target + Config.Get('sign_key')
+        check_str = Tool.getmd5(hotkey)
         if sign != check_str:
             self.write("Sign is error")
         else:
@@ -215,13 +242,15 @@ class CommandHandler(tornado.web.RequestHandler):
                 self.write("This is danger shell(" + cmdinfo[0] + ")")
             else:
                 try:
-                    aa2 = ansibleapi2.AnsibleApi2()
+                    aa2 = api4ansible2.Api()
                     response = aa2.runCmd(target, module, arg, sudo, forks)
                 except BaseException, e:
-                    reporting("A {0} error occurs: {1}".format(type(e),e.message));
-                    self.write({ 'error': e.message })
+                    Tool.reporting(
+                        "A {0} error occurs: {1}".format(type(e), e.message))
+                    self.write({'error': e.message})
                 else:
                     self.write(response)
+
 
 class PlaybookHandler(tornado.web.RequestHandler):
 
@@ -234,8 +263,8 @@ class PlaybookHandler(tornado.web.RequestHandler):
         if not hosts or not yml_file or not sign:
             self.write("Lack of necessary parameters")
             return False
-        hotkey = hosts + yml_file + options.sign_key
-        check_str = getmd5(hotkey)
+        hotkey = hosts + yml_file + Config.Get('sign_key')
+        check_str = Tool.getmd5(hotkey)
         if sign != check_str:
             self.write("Sign is error")
             return False
@@ -246,46 +275,19 @@ class PlaybookHandler(tornado.web.RequestHandler):
             if k[0:2] == "v_":
                 myvars[k[2:]] = v
 
-        yml_file = options.playbook_path + yml_file
+        yml_file = Config.Get('dir_playbook') + yml_file
         if os.path.isfile(yml_file):
-            reporting("playbook: {0}, host: {1}, forks: {2}".format(
+            Tool.reporting("playbook: {0}, host: {1}, forks: {2}".format(
                 yml_file, hosts, forks))
             try:
-                aa2 = ansibleapi2.AnsibleApi2()
+                aa2 = api4ansible2.Api()
                 response = aa2.runPlaybook(yml_file, myvars, forks)
             except BaseException, e:
-                reporting("A {0} error occurs: {1}".format(type(e),e.message));
-                self.write({ 'error': e.message })
+                Tool.reporting(
+                    "A {0} error occurs: {1}".format(type(e), e.message))
+                self.write({'error': e.message})
             else:
                 self.write(response)
 
         else:
             self.write("yml file(" + yml_file + ") is not existed")
-
-
-if __name__ == "__main__":
-    try:
-        opts, args = getopt.getopt(sys.argv[1:], "d")
-        print('Ansible API is running in', end=' ')
-        if ('-d', '') in opts:
-            LOG_REPORT_HANDERL = open("/var/log/ansible_api.log", "a")
-            print('Daemon Mode')
-        else:
-            print('Debug Mode')
-        application = tornado.web.Application([
-            (r"/", MainHandler),
-            (r"/scriptlist", FileListHandler),
-            (r"/scriptitem", FileRWHandler),
-            (r"/command", CommandHandler),
-            (r"/playbook", PlaybookHandler),
-            (r"/parsevars", ParseVarsFromFile),
-            (r"/filexist", FileExistHandler),
-        ])
-
-        http_server = tornado.httpserver.HTTPServer(application)
-        http_server.bind(options.api_port, options.api_host)
-        http_server.start(0)
-        tornado.ioloop.IOLoop.instance().start()
-    finally:
-        if LOG_REPORT_HANDERL:
-            LOG_REPORT_HANDERL.close()

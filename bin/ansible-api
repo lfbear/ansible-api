@@ -1,0 +1,50 @@
+#!/usr/bin/env python
+# coding: utf-8
+
+# A restful HTTP API for ansible by tornado
+# Base on ansible 2.2.0
+# Github <https://github.com/lfbear/ansible-api>
+# Author: lfbear
+# Version: 2.2.1 at 2016.7.11
+
+from __future__ import (print_function)
+
+import sys
+import os
+import getopt
+
+import tornado.ioloop
+import tornado.web
+import tornado.httpserver
+
+from ansible_api import *
+
+if __name__ == "__main__":
+    try:
+        opts, args = getopt.getopt(sys.argv[1:], 'd')
+        print('Ansible API is running in', end=' ')
+        if ('-d', '') in opts:
+            Tool.LOG_REPORT_HANDERL = open(Config.Get('log_path'), 'a')
+            Tool.reporting(' '.join(['Start...','(','PID =',str(os.getpid()),')']))
+            print('Daemon Mode')
+        else:
+            print('Debug Mode')
+
+        application = tornado.web.Application([
+            (r'/', MainHandler),
+            (r'/command', CommandHandler),
+            (r'/playbook', PlaybookHandler),
+            (r'/parsevars', ParseVarsFromFile),
+            (r'/filelist', FileListHandler),
+            (r'/fileitem', FileRWHandler),
+            (r'/filexist', FileExistHandler),
+        ])
+
+        http_server = tornado.httpserver.HTTPServer(application)
+        http_server.bind(Config.Get('port'), Config.Get('host'))
+        http_server.start(0)
+        tornado.ioloop.IOLoop.instance().start()
+    finally:
+        Tool.reporting(' '.join(['Exit','(','PID =',str(os.getpid()),')']))
+        if Tool.LOG_REPORT_HANDERL:
+            Tool.LOG_REPORT_HANDERL.close()

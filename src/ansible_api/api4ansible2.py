@@ -1,6 +1,12 @@
 #!/usr/bin/env python
 # coding: utf-8
 
+# A restful HTTP API for ansible by tornado
+# Base on ansible 2.x
+# Github <https://github.com/lfbear/ansible-api>
+# Author: lfbear
+# Version: 0.1.1 at 2016.8.17
+
 from collections import namedtuple
 from collections import MutableMapping
 from ansible.parsing.dataloader import DataLoader
@@ -10,10 +16,10 @@ from ansible.playbook.play import Play
 from ansible.executor.task_queue_manager import TaskQueueManager
 from ansible.executor.playbook_executor import PlaybookExecutor
 from ansible.plugins.callback.log_plays import CallbackModule
-from ansible.executor.process.detail import DetailProcess
+from detail import DetailProcess
 
 
-class AnsibleApi2(object):
+class Api(object):
 
     def runCmd(self, target, module, arg, sudo, forks):
         # initialize needed objects
