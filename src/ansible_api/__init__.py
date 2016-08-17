@@ -31,7 +31,7 @@ class Tool(object):
     @staticmethod
     def reporting(str):
         report = time.strftime('%Y-%m-%d %H:%M:%S',
-                               time.gmtime()) + ' | ' + str
+                               time.localtime()) + ' | ' + str
         if Tool.LOG_REPORT_HANDERL:
             Tool.LOG_REPORT_HANDERL.write(report + "\n")
             Tool.LOG_REPORT_HANDERL.flush()
