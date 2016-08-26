@@ -5,7 +5,9 @@
 # Base on ansible 2.x
 # Github <https://github.com/lfbear/ansible-api>
 # Author: lfbear
-# Version: 0.1.1 at 2016.8.17
+
+from __future__ import (absolute_import, division, print_function)
+__metaclass__ = type
 
 from collections import namedtuple
 from collections import MutableMapping
@@ -16,12 +18,13 @@ from ansible.playbook.play import Play
 from ansible.executor.task_queue_manager import TaskQueueManager
 from ansible.executor.playbook_executor import PlaybookExecutor
 from ansible.plugins.callback.log_plays import CallbackModule
-from detail import DetailProcess
+from ansible_api.detail import DetailProcess
 
 
 class Api(object):
 
-    def runCmd(self, target, module, arg, sudo, forks):
+    @staticmethod
+    def runCmd(target, module, arg, sudo, forks):
         # initialize needed objects
         variable_manager = VariableManager()
         loader = DataLoader()
@@ -74,7 +77,8 @@ class Api(object):
                 tqm.cleanup()
         return {'rc': rc, 'detail': d.run()}
 
-    def runPlaybook(self, yml_file, myvars, forks):
+    @staticmethod
+    def runPlaybook(yml_file, myvars, forks):
         # initialize needed objects
         variable_manager = VariableManager()
         loader = DataLoader()

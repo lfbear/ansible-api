@@ -5,19 +5,19 @@
 # Base on ansible 2.x
 # Github <https://github.com/lfbear/ansible-api>
 # Author: lfbear
-# Version: 0.1.1 at 2016.8.17
 
-from __future__ import (print_function)
+from __future__ import (absolute_import, division, print_function)
+__metaclass__ = type
 
 import sys
 import os
 import getopt
 
-import tornado.ioloop
-import tornado.web
-import tornado.httpserver
+from tornado import ioloop, web, httpserver
 
-from ansible_api import *
+from ansible_api.tool import Tool
+from ansible_api.config import Config
+from ansible_api import controller
 
 if __name__ == "__main__":
     try:
@@ -25,26 +25,27 @@ if __name__ == "__main__":
         print('Ansible API is running in', end=' ')
         if ('-d', '') in opts:
             Tool.LOG_REPORT_HANDERL = open(Config.Get('log_path'), 'a')
-            Tool.reporting(' '.join(['Start...','(','PID =',str(os.getpid()),')']))
+            Tool.reporting(
+                ' '.join(['Start...', '(', 'PID =', str(os.getpid()), ')']))
             print('Daemon Mode')
         else:
             print('Debug Mode')
 
-        application = tornado.web.Application([
-            (r'/', MainHandler),
-            (r'/command', CommandHandler),
-            (r'/playbook', PlaybookHandler),
-            (r'/parsevars', ParseVarsFromFile),
-            (r'/filelist', FileListHandler),
-            (r'/fileitem', FileRWHandler),
-            (r'/filexist', FileExistHandler),
+        application = web.Application([
+            (r'/', controller.Main),
+            (r'/command', controller.Command),
+            (r'/playbook', controller.Playbook),
+            (r'/parsevars', controller.ParseVarsFromFile),
+            (r'/filelist', controller.FileList),
+            (r'/fileitem', controller.FileReadWrite),
+            (r'/filexist', controller.FileExist),
         ])
 
-        http_server = tornado.httpserver.HTTPServer(application)
+        http_server = httpserver.HTTPServer(application)
         http_server.bind(Config.Get('port'), Config.Get('host'))
         http_server.start(0)
-        tornado.ioloop.IOLoop.instance().start()
+        ioloop.IOLoop.instance().start()
     finally:
-        Tool.reporting(' '.join(['Exit','(','PID =',str(os.getpid()),')']))
+        Tool.reporting(' '.join(['Exit', '(', 'PID =', str(os.getpid()), ')']))
         if Tool.LOG_REPORT_HANDERL:
             Tool.LOG_REPORT_HANDERL.close()
