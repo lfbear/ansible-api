@@ -16,7 +16,7 @@ python setup.py install
 
 ## How to prepare your data
 
-(https://github.com/lfbear/ansible-api/wiki/http-api-usage)
+[HTTP API Usage](https://github.com/lfbear/ansible-api/wiki/http-api-usage)
 
 ## Why need to modify ansible code
 
