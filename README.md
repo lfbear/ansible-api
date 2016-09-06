@@ -14,6 +14,10 @@ python setup.py install
 - start in deamon mode: ansible-api -d > /dev/null &
 - start in debug mode: ansible-api
 
+## How to prepare your data
+
+(https://github.com/lfbear/ansible-api/wiki/http-api-usage)
+
 ## Why need to modify ansible code
 
 I modified these code for getting more useful data in return, then you can do more actions according to return data.
