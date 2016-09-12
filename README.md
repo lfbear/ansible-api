@@ -11,7 +11,7 @@ python setup.py install
 ## How to use it
 
 - configuration: /etc/ansible/api.cfg
-- start in deamon mode: ansible-api -d > /dev/null &
+- start in deamon mode: ansible-api -d >> /var/log/ansible-api-process.log 2>&1 &
 - start in debug mode: ansible-api
 
 ## How to prepare your data
