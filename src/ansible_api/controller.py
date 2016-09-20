@@ -254,7 +254,7 @@ class ParseVarsFromFile(RequestHandler):
                                 tmp_file = Config.Get('dir_playbook') + vf
                                 if os.path.isfile(tmp_file):
                                     tmp_vars = yaml.load(file(tmp_file))
-                                    if isinstance(yamlitem, dict):
+                                    if isinstance(tmp_vars, dict):
                                         ignore_vars += tmp_vars.keys()
                     if len(ignore_vars) > 0:
                         Tool.reporting("skip vars: " + ",".join(ignore_vars))
