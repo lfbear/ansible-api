@@ -10,6 +10,8 @@ from __future__ import (absolute_import, division, print_function)
 __metaclass__ = type
 
 import os
+import yaml
+
 from jinja2 import Environment, meta
 from tornado.web import RequestHandler
 from ansible_api.tool import Tool
@@ -244,8 +246,20 @@ class ParseVarsFromFile(RequestHandler):
                 try:
                     Tool.reporting("parse from file: " + file_path)
                     contents = file_object.read()
+                    ignore_vars = []
+                    yamlstream = yaml.load(contents)
+                    for yamlitem in yamlstream:
+                        if isinstance(yamlitem,dict) and yamlitem.get('vars_files', []) and len(yamlitem['vars_files']) > 0:
+                            for vf in yamlitem['vars_files']:
+                                tmp_file = Config.Get('dir_playbook') + vf
+                                if os.path.isfile(tmp_file):
+                                    tmp_vars = yaml.load(file(tmp_file))
+                                    ignore_vars += tmp_vars.keys()
+                    if len(ignore_vars) > 0:
+                        Tool.reporting("skip vars: " + ",".join(ignore_vars))
                     ast = env.parse(contents)
                     var = list(meta.find_undeclared_variables(ast))
+                    var = list(set(var).difference(set(ignore_vars)))
                     self.write({'vars': var})
                 finally:
                     file_object.close()
