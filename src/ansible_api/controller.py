@@ -249,12 +249,13 @@ class ParseVarsFromFile(RequestHandler):
                     ignore_vars = []
                     yamlstream = yaml.load(contents)
                     for yamlitem in yamlstream:
-                        if isinstance(yamlitem,dict) and yamlitem.get('vars_files', []) and len(yamlitem['vars_files']) > 0:
+                        if isinstance(yamlitem, dict) and yamlitem.get('vars_files', []) and len(yamlitem['vars_files']) > 0:
                             for vf in yamlitem['vars_files']:
                                 tmp_file = Config.Get('dir_playbook') + vf
                                 if os.path.isfile(tmp_file):
                                     tmp_vars = yaml.load(file(tmp_file))
-                                    ignore_vars += tmp_vars.keys()
+                                    if isinstance(yamlitem, dict):
+                                        ignore_vars += tmp_vars.keys()
                     if len(ignore_vars) > 0:
                         Tool.reporting("skip vars: " + ",".join(ignore_vars))
                     ast = env.parse(contents)
