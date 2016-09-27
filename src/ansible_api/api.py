@@ -17,9 +17,26 @@ from ansible.inventory import Inventory
 from ansible.playbook.play import Play
 from ansible.executor.task_queue_manager import TaskQueueManager
 from ansible.executor.playbook_executor import PlaybookExecutor
-from ansible.plugins.callback.log_plays import CallbackModule
+#from ansible.plugins.callback.default import CallbackModule
+from ansible_api.callback import CallbackModule
 from ansible_api.detail import DetailProcess
+from ansible_api.websocket import message
 
+#rewrite init for adding stdout_callback
+class newPlaybookExecutor(PlaybookExecutor):
+    def __init__(self, playbooks, inventory, variable_manager, loader, options, passwords):
+        self._playbooks        = playbooks
+        self._inventory        = inventory
+        self._variable_manager = variable_manager
+        self._loader           = loader
+        self._options          = options
+        self.passwords         = passwords
+        self._unreachable_hosts = dict()
+
+        if options.listhosts or options.listtasks or options.listtags or options.syntax:
+            self._tqm = None
+        else:
+            self._tqm = TaskQueueManager(inventory=inventory, variable_manager=variable_manager, loader=loader, options=options, passwords=self.passwords, stdout_callback=CallbackModule())
 
 class Api(object):
 
@@ -59,7 +76,6 @@ class Api(object):
         )
         play = Play().load(play_source, variable_manager=variable_manager, loader=loader)
 
-        cb = CallbackModule()
         tqm = None
         try:
             tqm = TaskQueueManager(
@@ -68,7 +84,7 @@ class Api(object):
                 loader=loader,
                 options=pb_options,
                 passwords=passwords,
-                stdout_callback=cb,
+                stdout_callback=CallbackModule(),
             )
             rc = tqm.run(play)
             d = DetailProcess(tqm._prst)
@@ -102,12 +118,10 @@ class Api(object):
             loader=loader, variable_manager=variable_manager)
         variable_manager.set_inventory(inventory)
         variable_manager.extra_vars = myvars
-        pbex = PlaybookExecutor(playbooks=[yml_file],
+        pbex = newPlaybookExecutor(playbooks=[yml_file],
                                 inventory=inventory, variable_manager=variable_manager, loader=loader,
                                 options=pb_options, passwords=passwords)
         rc = pbex.run()
-        # print((pbex._tqm._prst))
-        pbex._tqm._stdout_callback = CallbackModule()
         # parse result detail
         d = DetailProcess(pbex._tqm._prst)
         return {'rc': rc, 'detail': d.run()}

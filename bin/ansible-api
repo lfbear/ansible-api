@@ -13,39 +13,21 @@ import sys
 import os
 import getopt
 
-from tornado import ioloop, web, httpserver
-
 from ansible_api.tool import Tool
 from ansible_api.config import Config
-from ansible_api import controller
+from ansible_api.webapi import WebApi
 
 if __name__ == "__main__":
-    try:
-        opts, args = getopt.getopt(sys.argv[1:], 'd')
-        print('Ansible API is running in', end=' ')
-        if ('-d', '') in opts:
-            Tool.LOG_REPORT_HANDERL = open(Config.Get('log_path'), 'a')
-            Tool.reporting(
-                ' '.join(['Start...', '(', 'PID =', str(os.getpid()), ')']))
-            print('Daemon Mode')
-        else:
-            print('Debug Mode')
 
-        application = web.Application([
-            (r'/', controller.Main),
-            (r'/command', controller.Command),
-            (r'/playbook', controller.Playbook),
-            (r'/parsevars', controller.ParseVarsFromFile),
-            (r'/filelist', controller.FileList),
-            (r'/fileitem', controller.FileReadWrite),
-            (r'/filexist', controller.FileExist),
-        ])
+    opts, args = getopt.getopt(sys.argv[1:], 'd')
+    print('Ansible API is running in', end=' ')
+    if ('-d', '') in opts:
+        Tool.LOG_REPORT_HANDERL = open(Config.Get('log_path'), 'a')
+        Tool.reporting(
+            ' '.join(['Start...', '(', 'PID =', str(os.getpid()), ')']))
+        print('Daemon Mode')
+    else:
+        print('Debug Mode')
 
-        http_server = httpserver.HTTPServer(application)
-        http_server.bind(Config.Get('port'), Config.Get('host'))
-        http_server.start(0)
-        ioloop.IOLoop.instance().start()
-    finally:
-        Tool.reporting(' '.join(['Exit', '(', 'PID =', str(os.getpid()), ')']))
-        if Tool.LOG_REPORT_HANDERL:
-            Tool.LOG_REPORT_HANDERL.close()
+    app = WebApi()
+    app.start()

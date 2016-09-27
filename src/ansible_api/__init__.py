@@ -9,5 +9,5 @@
 from __future__ import (absolute_import, division, print_function)
 __metaclass__ = type
 
-# update at 2016.8.26
-__version__ = '0.1.2'
+# update at 2016.9.22
+__version__ = '0.1.3'
