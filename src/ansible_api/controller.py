@@ -13,7 +13,7 @@ import os
 import yaml
 
 from jinja2 import Environment, meta
-from tornado.web import RequestHandler
+from tornado.web import RequestHandler,HTTPError
 from ansible_api.tool import Tool
 from ansible_api.config import Config
 from ansible_api.api import Api
@@ -28,15 +28,21 @@ __all__ = [
     'Playbook',
 ]
 
+class Controller(RequestHandler):
 
-class Main(RequestHandler):
+    def __init__(self, application, request, **kwargs):
+        super(Controller, self).__init__(application, request, **kwargs)
+        if len(Config.Get('allow_ip')) and self.request.remote_ip not in Config.Get('allow_ip'):
+            raise HTTPError(403,'Your ip(%s) is forbidden' % self.request.remote_ip)
+
+class Main(Controller):
 
     def get(self):
         self.write(Tool.jsonal(
             {'message': "Hello, I am Ansible Api", 'rc': Tool.ERRCODE_NONE}))
 
 
-class Command(RequestHandler):
+class Command(Controller):
 
     def get(self):
         self.write(Tool.jsonal(
@@ -76,7 +82,7 @@ class Command(RequestHandler):
                     self.write(response)
 
 
-class Playbook(RequestHandler):
+class Playbook(Controller):
 
     def post(self):
         data = Tool.parsejson(self.request.body)
@@ -120,7 +126,7 @@ class Playbook(RequestHandler):
                 {'error': "yml file(" + yml_file + ") is not existed", 'rc': Tool.ERRCODE_SYS}))
 
 
-class FileList(RequestHandler):
+class FileList(Controller):
 
     def get(self):
         path = self.get_argument('type', 'script')
@@ -146,7 +152,7 @@ class FileList(RequestHandler):
                 {'error': "Wrong type in argument", 'rc': Tool.ERRCODE_SYS}))
 
 
-class FileReadWrite(RequestHandler):
+class FileReadWrite(Controller):
 
     def get(self):
         path = self.get_argument('type', 'script')
@@ -203,7 +209,7 @@ class FileReadWrite(RequestHandler):
             self.write(Tool.jsonal({'ret': True}))
 
 
-class FileExist(RequestHandler):
+class FileExist(Controller):
 
     def get(self):
         path = self.get_argument('type', 'script')
@@ -228,7 +234,7 @@ class FileExist(RequestHandler):
                 {'error': "Wrong type in argument", 'rc': Tool.ERRCODE_SYS}))
 
 
-class ParseVarsFromFile(RequestHandler):
+class ParseVarsFromFile(Controller):
 
     def get(self):
         file_name = self.get_argument('name')

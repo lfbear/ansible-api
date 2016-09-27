@@ -19,6 +19,7 @@ class Config(object):
     port = 8765
     sign_key = 'YOUR_SIGNATURE_KEY_HERE'
     log_path = '/var/log/ansible-api.log'
+    allow_ip = []
 
     dir_script = ''
     dir_playbook = ''
@@ -33,25 +34,27 @@ class Config(object):
         except:
             pass
         else:
-            if (cf.get('default', 'host')):
+            if (cf.has_option('default', 'host')):
                 self.host = cf.get('default', 'host')
-            if (cf.get('default', 'port')):
+            if (cf.has_option('default', 'port')):
                 self.port = cf.get('default', 'port')
-            if (cf.get('default', 'sign_key')):
+            if (cf.has_option('default', 'sign_key')):
                 self.sign_key = cf.get('default', 'sign_key')
-            if (cf.get('default', 'log_path')):
+            if (cf.has_option('default', 'log_path')):
                 self.log_path = cf.get('default', 'log_path')
+            if (cf.has_option('default', 'allow_ip')):
+                self.allow_ip = cf.get('default', 'allow_ip').split()
 
         try:
             cf.options('directory')
         except:
             pass
         else:
-            if (cf.get('directory', 'script')):
+            if (cf.has_option('directory', 'script')):
                 self.dir_script = cf.get('directory', 'script')
-            if (cf.get('directory', 'playbook')):
+            if (cf.has_option('directory', 'playbook')):
                 self.dir_playbook = cf.get('directory', 'playbook')
-            if (cf.get('directory', 'authkeys')):
+            if (cf.has_option('directory', 'authkeys')):
                 self.dir_authkeys = cf.get('directory', 'authkeys')
 
     @staticmethod
