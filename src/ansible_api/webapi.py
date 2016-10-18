@@ -9,7 +9,6 @@
 from __future__ import (absolute_import, division, print_function)
 __metaclass__ = type
 
-
 from tornado import ioloop, web, httpserver
 import threading
 
@@ -18,9 +17,11 @@ from ansible_api import controller
 from ansible_api import websocket
 
 class WebApi(object):
+
     def __init__(self):
-        self.application = web.Application([
+        application = web.Application([
             (r'/', controller.Main),
+            (r'/asynctest', controller.AsyncTest),
             (r'/command', controller.Command),
             (r'/playbook', controller.Playbook),
             (r'/parsevars', controller.ParseVarsFromFile),
@@ -30,9 +31,8 @@ class WebApi(object):
             (r'/message', websocket.message),
         ])
 
-        self.http_server = httpserver.HTTPServer(self.application)
-        self.http_server.listen(Config.Get('port'), Config.Get('host'))
-        self.ioLoop = threading.Thread(target = ioloop.IOLoop.instance().start)
+        http_server = httpserver.HTTPServer(application)
+        http_server.listen(Config.Get('port'), Config.Get('host'))
 
     def start(self):
-        self.ioLoop.start()
+        ioloop.IOLoop.instance().start()

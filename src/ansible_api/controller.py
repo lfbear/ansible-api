@@ -11,12 +11,16 @@ __metaclass__ = type
 
 import os
 import yaml
+import time
 
 from jinja2 import Environment, meta
-from tornado.web import RequestHandler,HTTPError
+from tornado.web import RequestHandler, HTTPError, asynchronous
+import tornado.gen
+from concurrent import futures
 from ansible_api.tool import Tool
 from ansible_api.config import Config
 from ansible_api.api import Api
+
 
 __all__ = [
     'Main',
@@ -28,12 +32,17 @@ __all__ = [
     'Playbook',
 ]
 
+executor = futures.ThreadPoolExecutor(Config.Get('thread_pool_size'))
+
+
 class Controller(RequestHandler):
 
     def __init__(self, application, request, **kwargs):
         super(Controller, self).__init__(application, request, **kwargs)
         if len(Config.Get('allow_ip')) and self.request.remote_ip not in Config.Get('allow_ip'):
-            raise HTTPError(403,'Your ip(%s) is forbidden' % self.request.remote_ip)
+            raise HTTPError(403, 'Your ip(%s) is forbidden' %
+                            self.request.remote_ip)
+
 
 class Main(Controller):
 
@@ -42,16 +51,32 @@ class Main(Controller):
             {'message': "Hello, I am Ansible Api", 'rc': Tool.ERRCODE_NONE}))
 
 
+class AsyncTest(Controller):
+
+    @tornado.gen.coroutine
+    def get(self):
+        msg = yield executor.submit(self.test, 10)
+        self.write(Tool.jsonal(
+            {'message': msg, 'rc': Tool.ERRCODE_NONE}))
+        self.finish()
+
+    def test(self, s):
+        time.sleep(s)
+        return 'i have slept 10 s'
+
+
 class Command(Controller):
 
     def get(self):
         self.write(Tool.jsonal(
             {'error': "Forbidden in get method", 'rc': Tool.ERRCODE_SYS}))
 
+    @tornado.gen.coroutine
     def post(self):
         data = Tool.parsejson(self.request.body)
         badcmd = ['reboot', 'su', 'sudo', 'dd',
                   'mkfs', 'shutdown', 'half', 'top']
+        name = data['n']
         module = data['m']
         arg = data['a']
         target = data['t']
@@ -59,9 +84,9 @@ class Command(Controller):
         sudo = True if data['r'] else False
         forks = data.get('c', 50)
         cmdinfo = arg.split(' ', 1)
-        Tool.reporting('run: {0}, {1}, {2}, {3}, {4}'.format(
-            target, module, arg, sudo, forks))
-        hotkey = module + target + Config.Get('sign_key')
+        Tool.reporting('run: {0}, {1}, {2}, {3}, {4}, {5}'.format(
+            name, target, module, arg, sudo, forks))
+        hotkey = name + module + target + Config.Get('sign_key')
         check_str = Tool.getmd5(hotkey)
         if sign != check_str:
             self.write(Tool.jsonal(
@@ -72,8 +97,8 @@ class Command(Controller):
                     {'error': "This is danger shell: " + cmdinfo[0], 'rc': Tool.ERRCODE_BIZ}))
             else:
                 try:
-                    response = Api.runCmd(target, module, arg, sudo, forks)
-                except BaseException, e:
+                    response = yield executor.submit(Api.runCmd, name=name, target=target, module=module, arg=arg, sudo=sudo, forks=forks)
+                except BaseException as e:
                     Tool.reporting(
                         "A {0} error occurs: {1}".format(type(e), e.message))
                     self.write(Tool.jsonal(
@@ -84,6 +109,7 @@ class Command(Controller):
 
 class Playbook(Controller):
 
+    @tornado.gen.coroutine
     def post(self):
         data = Tool.parsejson(self.request.body)
         hosts = data['h']
@@ -93,37 +119,36 @@ class Playbook(Controller):
         if not hosts or not yml_file or not sign:
             self.write(Tool.jsonal(
                 {'error': "Lack of necessary parameters", 'rc': Tool.ERRCODE_SYS}))
-            return False
-        hotkey = hosts + yml_file + Config.Get('sign_key')
-        check_str = Tool.getmd5(hotkey)
-        if sign != check_str:
-            self.write(Tool.jsonal(
-                {'error': "Sign is error", 'rc': Tool.ERRCODE_BIZ}))
-            return False
-
-        myvars = {'hosts': hosts}
-        # injection vars in playbook (rule: vars start with "v_" in post data)
-        for(k, v) in data.items():
-            if k[0:2] == "v_":
-                myvars[k[2:]] = v
-
-        yml_file = Config.Get('dir_playbook') + yml_file
-        if os.path.isfile(yml_file):
-            Tool.reporting("playbook: {0}, host: {1}, forks: {2}".format(
-                yml_file, hosts, forks))
-            try:
-                response = Api.runPlaybook(yml_file, myvars, forks)
-            except BaseException, e:
-                Tool.reporting(
-                    "A {0} error occurs: {1}".format(type(e), e.message))
-                self.write(Tool.jsonal(
-                    {'error': e.message, 'rc': Tool.ERRCODE_BIZ}))
-            else:
-                self.write(response)
-
         else:
-            self.write(Tool.jsonal(
-                {'error': "yml file(" + yml_file + ") is not existed", 'rc': Tool.ERRCODE_SYS}))
+            hotkey = hosts + yml_file + Config.Get('sign_key')
+            check_str = Tool.getmd5(hotkey)
+            if sign != check_str:
+                self.write(Tool.jsonal(
+                    {'error': "Sign is error", 'rc': Tool.ERRCODE_BIZ}))
+            else:
+                myvars = {'hosts': hosts}
+                # injection vars in playbook (rule: vars start with "v_" in
+                # post data)
+                for(k, v) in data.items():
+                    if k[0:2] == "v_":
+                        myvars[k[2:]] = v
+                yml_file = Config.Get('dir_playbook') + yml_file
+                if os.path.isfile(yml_file):
+                    Tool.reporting("playbook: {0}, host: {1}, forks: {2}".format(
+                        yml_file, hosts, forks))
+                    try:
+                        response = yield executor.submit(Api.runPlaybook, yml_file=yml_file, myvars=myvars, forks=forks)
+                    except BaseException as e:
+                        Tool.reporting(
+                            "A {0} error occurs: {1}".format(type(e), e.message))
+                        self.write(Tool.jsonal(
+                            {'error': e.message, 'rc': Tool.ERRCODE_BIZ}))
+                    else:
+                        self.write(response)
+
+                else:
+                    self.write(Tool.jsonal(
+                        {'error': "yml file(" + yml_file + ") is not existed", 'rc': Tool.ERRCODE_SYS}))
 
 
 class FileList(Controller):

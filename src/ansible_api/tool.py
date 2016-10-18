@@ -25,7 +25,7 @@ class Tool(object):
     def getmd5(str):
         import hashlib
         m = hashlib.md5()
-        m.update(str)
+        m.update(str.encode('utf-8'))
         return m.hexdigest()
 
     @staticmethod
@@ -44,4 +44,4 @@ class Tool(object):
 
     @staticmethod
     def parsejson(string):
-        return json.loads(string)
+        return json.loads(string.decode('utf-8'))

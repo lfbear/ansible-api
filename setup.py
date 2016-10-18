@@ -81,7 +81,7 @@ try:
         scripts=['bin/ansible-api'],
         package_dir={'': 'src'},
         packages=find_packages('src'),
-        install_requires=['tornado>=4.3', 'ansible>=2.0.0'],
+        install_requires=['tornado>=4.3', 'ansible>=2.0.0','futures'],
         cmdclass={'install': CustomInstall},
 
         author="lfbear",

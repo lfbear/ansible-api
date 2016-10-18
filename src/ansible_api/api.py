@@ -21,9 +21,10 @@ from ansible.executor.playbook_executor import PlaybookExecutor
 from ansible_api.callback import CallbackModule
 from ansible_api.detail import DetailProcess
 from ansible_api.websocket import message
+import tornado.gen
 
 #rewrite init for adding stdout_callback
-class newPlaybookExecutor(PlaybookExecutor):
+class PlaybookExecutorV2(PlaybookExecutor):
     def __init__(self, playbooks, inventory, variable_manager, loader, options, passwords):
         self._playbooks        = playbooks
         self._inventory        = inventory
@@ -41,7 +42,7 @@ class newPlaybookExecutor(PlaybookExecutor):
 class Api(object):
 
     @staticmethod
-    def runCmd(target, module, arg, sudo, forks):
+    def runCmd(name, target, module, arg, sudo, forks):
         # initialize needed objects
         variable_manager = VariableManager()
         loader = DataLoader()
@@ -67,12 +68,10 @@ class Api(object):
 
         # create play with tasks
         play_source = dict(
-            name="Ansible Shell Task",
+            name=name, # likes this "taskname#taskid_123@projectname",
             hosts=target,
             gather_facts='no',
-            tasks=[
-                dict(action=dict(module=module, args=arg))
-            ]
+            tasks=[dict(action=dict(module=module, args=arg))]
         )
         play = Play().load(play_source, variable_manager=variable_manager, loader=loader)
 
@@ -118,7 +117,7 @@ class Api(object):
             loader=loader, variable_manager=variable_manager)
         variable_manager.set_inventory(inventory)
         variable_manager.extra_vars = myvars
-        pbex = newPlaybookExecutor(playbooks=[yml_file],
+        pbex = PlaybookExecutorV2(playbooks=[yml_file],
                                 inventory=inventory, variable_manager=variable_manager, loader=loader,
                                 options=pb_options, passwords=passwords)
         rc = pbex.run()
