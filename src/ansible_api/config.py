@@ -10,7 +10,7 @@ from __future__ import (absolute_import, division, print_function)
 __metaclass__ = type
 
 import ConfigParser
-#import configparser as ConfigParser  # python 3
+#import configparser as ConfigParser  #python 3
 
 __all__ = ['Config']
 

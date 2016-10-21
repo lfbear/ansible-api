@@ -10,9 +10,11 @@ from __future__ import (absolute_import, division, print_function)
 __metaclass__ = type
 
 from ansible.plugins.callback import CallbackBase
-from ansible.executor.task_result import TaskResult
-from ansible.playbook.task import Task
 from ansible_api.websocket import message
+from ansible.executor.task_result import TaskResult as TypeTaskResult
+from ansible.executor.stats import AggregateStats as TypeAggregateStats
+from ansible.playbook.task import Task as TypeTask
+from ansible.playbook.play import Play as TypePlay
 
 
 class CallbackModule(CallbackBase):
@@ -26,109 +28,154 @@ class CallbackModule(CallbackBase):
     RC_FAIL = 1
 
     current_taskname = ''
+    item_status = ('failed', 'changed', 'skipped', 'unreachable', 'ok')
+    std_lines = dict()
 
-    def display(self, result, rc):
-        params = {'msg': {}, 'task_name': self.current_taskname,
-                  'rc': rc, 'ctime': ''}
-        if isinstance(result, TaskResult):
-            params['msg']['host'] = result._host.get_name()
-            params['msg']['module'] = result._task.get_name()
-            detail = result._result
-            # print(detail)
-            if result.is_changed():
-                params['rc'] = self.RC_SUCC
-                if detail['invocation'].get('module_name') == 'command':
-                    params['msg']['unique'] = {'cost_time': detail['delta']}
-                elif detail['invocation'].get('module_name') == 'script':
-                    params['msg']['unique'] = {'script_file': detail[
-                        'invocation']['module_args']['_raw_params']}
-                elif detail.get('state'):
-                    params['msg']['unique'] = {'state': detail['state']}
-                elif detail.get('cmd'):
-                    params['msg']['unique'] = {'cmd': detail['cmd']}
-                else:
-                    print('Found a new type in TaskResult')
-            elif detail.get('msg', '') != '':  # 有msg信息 认为出现了错误
-                params['rc'] = self.RC_FAIL
-                params['msg']['error'] = detail['msg']
+    def reset_output(self):
+        self.std_lines.clear()
+
+    def v2_on_any(self, *args, **kwargs):
+
+        wsmsg = dict(
+            msg=dict(), rc=self.RC_SUCC,
+            task_name=self.current_taskname,
+        )
+
+        for crucial in args:
+            if isinstance(crucial, TypeTaskResult):
+                item = self._fill_item_from_taskresult(
+                    init_data=dict(
+                        host=crucial._host.get_name().encode('utf-8'),
+                        task_name=crucial._task.get_name().encode('utf-8'),
+                        rc=self.RC_SUCC
+                    ), detail=crucial._result)
+
+                if self.std_lines.get(item['host']) == None:
+                    self.std_lines[item['host']] = []
+
+                self.std_lines[item['host']].append(item)
+                wsmsg['rc'] = item['rc']
+                wsmsg['msg'] = item
+                message.sendmsg(wsmsg, message.MSGTYPE_INFO)
+            elif isinstance(crucial, TypeTask):
+                pass
+            elif isinstance(crucial, TypePlay):
+                pass
+                # print(crucial)
+            elif isinstance(crucial, TypeAggregateStats):
+                hosts = sorted(crucial.processed.keys())
+                wsmsg = dict(
+                    rc=self.RC_SUCC,
+                    task_name=self.current_taskname,
+                    msg=dict(kind='play_summarize', list=dict())
+                )
+                for h in hosts:
+                    t = crucial.summarize(h)
+                    c = 1 if t['unreachable'] or t['failures'] else 0
+                    wsmsg['msg']['list'][h] = dict(
+                        host=h, rc=c, unreachable=t[
+                            'unreachable'], skipped=t['skipped'],
+                        ok=t['ok'], changed=t[
+                            'changed'], failures=t['failures']
+                    )
+                    wsmsg['rc'] += c
+                message.sendmsg(wsmsg, message.MSGTYPE_NOTICE)
+            elif isinstance(crucial, unicode) or isinstance(crucial, str):
+                wsmsg = dict(
+                    rc=self.RC_SUCC,
+                    task_name=self.current_taskname,
+                    msg=dict(kind='desc', unique=crucial.encode('utf-8'))
+                )
+                message.sendmsg(wsmsg, message.MSGTYPE_NOTICE)
             else:
-                params['rc'] = self.RC_SUCC
-                print("is_changed=false")
-                print(detail)
-                #params['msg']['unique'] = {'unknown':detail['msg']}
+                print('Found a new type in result [%s]' % (type(crucial)))
 
-            message.sendmsg(params, message.MSGTYPE_INFO)
+    def _fill_item_from_taskresult(self, init_data, detail):
+        item = dict()
+        if isinstance(init_data, dict):
+            item = init_data
 
-        elif isinstance(result, unicode) or isinstance(result, str):
-            params['rc'] = rc
-            params['msg']['kind'] = 'desc'
-            params['msg']['unique'] = result
-            message.sendmsg(params, message.MSGTYPE_NOTICE)
-        elif isinstance(result, Task):
-            params['rc'] = rc
-            params['msg']['kind'] = 'task'
-            params['msg']['value'] = result.get_name()
-            message.sendmsg(params, message.MSGTYPE_NOTICE)
-        else:
-            print('Found a new type in result [%s]' % (type(result)))
+        if detail.get('rc'):
+            item['rc'] = detail['rc']
 
-    def v2_playbook_on_start(self, playbook):
-        #message.sendmsg({'rc':self.RC_SUCC,'task_name':'none@null', 'msg': {'kind':'playbook','value':playbook._file_name}},message.MSGTYPE_NOTICE)
-        print('PlayBook [%s] start' % playbook._file_name)
+        for s in self.item_status:
+            if detail.get(s):
+                item[s] = detail[s]
+                if s in ('failed', 'unreachable'):
+                    item['rc'] = self.RC_FAIL
+
+        if detail.get('stdout') and detail['stdout'] != '':
+            item['stdout'] = detail['stdout'].encode('utf-8')
+
+        if detail.get('stderr') and detail['stderr'] != '':
+            item['stderr'] = detail['stderr'].encode('utf-8')
+
+        if detail.get('msg') and detail['msg'] != '':
+            item['msg'] = detail['msg'].encode('utf-8')
+
+        if detail.get('invocation') and detail['invocation'].get('module_args') and detail['invocation']['module_args'].get('_raw_params'):
+            item['cmd'] = detail['invocation'][
+                'module_args']['_raw_params']
+        return item
+
+    ########## special actions on other callback event ##########
 
     def v2_playbook_on_task_start(self, task, is_conditional):
-        self.display(task, self.RC_SUCC)
+        wsmsg = dict(
+            rc=self.RC_SUCC,
+            task_name=self.current_taskname,
+            msg=dict(kind='task_start', value=task.get_name().encode('utf-8'))
+        )
+        message.sendmsg(wsmsg, message.MSGTYPE_NOTICE)
 
     def v2_playbook_on_play_start(self, play):
         palyname = play.get_name().strip()
-        self.current_taskname = palyname
         hosts = play._attributes.get('hosts')[0].split(',')  # why is list[0]
-        message.sendmsg({'rc': self.RC_SUCC, 'task_name': self.current_taskname, 'task_count': len(
-            hosts), 'msg': {'kind': 'play_start', 'value': palyname}}, message.MSGTYPE_NOTICE)
+        self.current_taskname = palyname.encode('utf-8')
+        wsmsg = dict(
+            rc=self.RC_SUCC,
+            task_name=palyname,
+            task_count=len(hosts),
+            msg=dict(kind='play_start', value=palyname)
+        )
+        message.sendmsg(wsmsg, message.MSGTYPE_NOTICE)
 
-    def v2_runner_retry(self, result):
-        msg = "FAILED - RETRYING: %s (%d retries left)." % (
-            result._task, result._result['retries'] - result._result['attempts'])
-        message.sendmsg({'rc': self.RC_FAIL, 'task_name': self.current_taskname, 'msg': {
-                        'kind': 'needs_retry', 'value': result._task}}, message.MSGTYPE_NOTICE)
+    #--- maybe those callback function following will help you ---#
 
-    def v2_playbook_on_stats(self, stats):
-        #self.display('PLAY SUMMARIZE')
+    # def v2_playbook_on_start(self, playbook):
+    #     print('PlayBook [%s] start' % playbook._file_name)
+    #
+    # def v2_runner_retry(self, result):
+    #     print("FAILED - RETRYING: %s (%d retries left)." % (result._task, result._result['retries'] - result._result['attempts']))
+    #
+    # def v2_runner_on_ok(self, result):
+    #     pass
+    #
+    # def v2_runner_on_failed(self, result, ignore_errors):
+    #     pass
+    #
+    # def v2_playbook_on_stats(self, stats):
+    #     pass
+    #
+    # def v2_playbook_on_no_hosts_recrucialing(result):
+    #     pass
+    #
+    # def v2_runner_on_unreachable(self, *args, **kwargs):
+    #     pass
 
-        hosts = sorted(stats.processed.keys())
-        details = {}
-        return_code = 0
-        for h in hosts:
-            t = stats.summarize(h)
-            rc = 1 if t['unreachable'] or t['failures'] else 0
-            details[h] = {'host': h, 'rc': rc, 'unreachable': t['unreachable'], 'skipped': t[
-                'skipped'], 'ok': t['ok'], 'changed': t['changed'], 'failures': t['failures']}
-            #self.display('Host:%s, Stat:%s'% (h,str(t)),rc)
-            return_code += rc
-        message.sendmsg({'rc': return_code, 'task_name': self.current_taskname, 'msg': {
-                        'kind': 'play_summarize', 'list': details}}, message.MSGTYPE_NOTICE)
-
-    def v2_runner_on_ok(self, result):
-        self.display(result, self.RC_SUCC)
-
-    def v2_runner_on_failed(self, result, ignore_errors):
-        self.display(result, self.RC_FAIL)
-
-    def v2_playbook_on_no_hosts_remaining(result):
-        pass
-
-    v2_runner_on_skipped = display
-    v2_runner_on_unreachable = display
-    v2_runner_on_no_hosts = display
-    v2_runner_on_async_poll = display
-    v2_runner_on_async_ok = display
-    v2_runner_on_async_failed = display
-    v2_runner_on_file_diff = display
-    v2_playbook_on_notify = display
-    v2_playbook_on_no_hosts_matched = display
-    v2_playbook_on_cleanup_task_start = display
-    v2_playbook_on_handler_task_start = display
-    v2_runner_item_on_ok = display
-    v2_runner_item_on_failed = display
-    v2_runner_item_on_skipped = display
-    v2_runner_retry = display
+    # def defalut_cb(self, *args, **kwargs):
+    #     pass
+    # v2_runner_on_skipped = defalut_cb
+    # v2_runner_on_no_hosts = defalut_cb
+    # v2_runner_on_async_poll = defalut_cb
+    # v2_runner_on_async_ok = defalut_cb
+    # v2_runner_on_async_failed = defalut_cb
+    # v2_runner_on_file_diff = defalut_cb
+    # v2_playbook_on_notify = defalut_cb
+    # v2_playbook_on_no_hosts_matched = defalut_cb
+    # v2_playbook_on_cleanup_task_start = defalut_cb
+    # v2_playbook_on_handler_task_start = defalut_cb
+    # v2_runner_item_on_ok = defalut_cb
+    # v2_runner_item_on_failed = defalut_cb
+    # v2_runner_item_on_skipped = defalut_cb
+    # v2_runner_retry = defalut_cb

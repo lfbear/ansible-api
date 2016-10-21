@@ -19,25 +19,27 @@ from ansible.executor.task_queue_manager import TaskQueueManager
 from ansible.executor.playbook_executor import PlaybookExecutor
 #from ansible.plugins.callback.default import CallbackModule
 from ansible_api.callback import CallbackModule
-from ansible_api.detail import DetailProcess
 from ansible_api.websocket import message
 import tornado.gen
 
-#rewrite init for adding stdout_callback
+# rewrite init for adding stdout_callback
 class PlaybookExecutorV2(PlaybookExecutor):
+
     def __init__(self, playbooks, inventory, variable_manager, loader, options, passwords):
-        self._playbooks        = playbooks
-        self._inventory        = inventory
+        self._playbooks = playbooks
+        self._inventory = inventory
         self._variable_manager = variable_manager
-        self._loader           = loader
-        self._options          = options
-        self.passwords         = passwords
+        self._loader = loader
+        self._options = options
+        self.passwords = passwords
         self._unreachable_hosts = dict()
 
         if options.listhosts or options.listtasks or options.listtags or options.syntax:
             self._tqm = None
         else:
-            self._tqm = TaskQueueManager(inventory=inventory, variable_manager=variable_manager, loader=loader, options=options, passwords=self.passwords, stdout_callback=CallbackModule())
+            self._tqm = TaskQueueManager(inventory=inventory, variable_manager=variable_manager,
+                                         loader=loader, options=options, passwords=self.passwords, stdout_callback=CallbackModule())
+
 
 class Api(object):
 
@@ -68,7 +70,7 @@ class Api(object):
 
         # create play with tasks
         play_source = dict(
-            name=name, # likes this "taskname#taskid_123@projectname",
+            name=name,  # likes this "taskname#taskid_123@projectname",
             hosts=target,
             gather_facts='no',
             tasks=[dict(action=dict(module=module, args=arg))]
@@ -85,12 +87,13 @@ class Api(object):
                 passwords=passwords,
                 stdout_callback=CallbackModule(),
             )
+            tqm._stdout_callback.reset_output()
             rc = tqm.run(play)
-            d = DetailProcess(tqm._prst)
         finally:
             if tqm is not None:
                 tqm.cleanup()
-        return {'rc': rc, 'detail': d.run()}
+
+        return {'rc': rc, 'detail': tqm._stdout_callback.std_lines}
 
     @staticmethod
     def runPlaybook(yml_file, myvars, forks):
@@ -118,9 +121,7 @@ class Api(object):
         variable_manager.set_inventory(inventory)
         variable_manager.extra_vars = myvars
         pbex = PlaybookExecutorV2(playbooks=[yml_file],
-                                inventory=inventory, variable_manager=variable_manager, loader=loader,
-                                options=pb_options, passwords=passwords)
+                                  inventory=inventory, variable_manager=variable_manager, loader=loader,
+                                  options=pb_options, passwords=passwords)
         rc = pbex.run()
-        # parse result detail
-        d = DetailProcess(pbex._tqm._prst)
-        return {'rc': rc, 'detail': d.run()}
+        return {'rc': rc, 'detail': pbex._tqm._stdout_callback.std_lines}

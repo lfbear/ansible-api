@@ -36,7 +36,7 @@ class Tool(object):
             Tool.LOG_REPORT_HANDERL.write(report + "\n")
             Tool.LOG_REPORT_HANDERL.flush()
         else:
-            print(report)
+            print("\033[5;30;47m%s\033[0m" % report)
 
     @staticmethod
     def jsonal(data):

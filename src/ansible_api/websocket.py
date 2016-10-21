@@ -90,7 +90,7 @@ class message(websocket.WebSocketHandler):
 
         msg['type'] = type
         msg['ctime'] = time.strftime('%Y-%m-%d %H:%M:%S', time.localtime())
-        print("[rt_log@%s] %s" % (msg_pool,msg))
+        print("\033[0;33m[rt_log@%s] %s\033[0m" % (msg_pool,msg))
         target = []
         if msg_pool == '#DEAULT#':
             target = self.DEFAULT_POOL

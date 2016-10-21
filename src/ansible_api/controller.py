@@ -19,7 +19,7 @@ import tornado.gen
 from concurrent import futures
 from ansible_api.tool import Tool
 from ansible_api.config import Config
-from ansible_api.api import Api
+from ansible_api.core import Api
 
 
 __all__ = [
@@ -30,6 +30,7 @@ __all__ = [
     'ParseVarsFromFile',
     'Command',
     'Playbook',
+    'AsyncTest',
 ]
 
 executor = futures.ThreadPoolExecutor(Config.Get('thread_pool_size'))
