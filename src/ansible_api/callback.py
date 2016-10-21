@@ -130,12 +130,20 @@ class CallbackModule(CallbackBase):
 
     def v2_playbook_on_play_start(self, play):
         palyname = play.get_name().strip()
-        hosts = play._attributes.get('hosts')[0].split(',')  # why is list[0]
+        task = list()
+        host = list()
+        for t in play.get_tasks():
+            task = list(set(task + t))
+        for h_str in play._attributes.get('hosts'):
+            h = h_str.split(',')
+            host = list(set(host + h))
+
         self.current_taskname = palyname.encode('utf-8')
         wsmsg = dict(
             rc=self.RC_SUCC,
             task_name=palyname,
-            task_count=len(hosts),
+            task_count=len(task),
+            host_count=len(host),
             msg=dict(kind='play_start', value=palyname)
         )
         message.sendmsg(wsmsg, message.MSGTYPE_NOTICE)
