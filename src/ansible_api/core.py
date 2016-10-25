@@ -18,11 +18,25 @@ from ansible.playbook.play import Play
 from ansible.executor.task_queue_manager import TaskQueueManager
 from ansible.executor.playbook_executor import PlaybookExecutor
 #from ansible.plugins.callback.default import CallbackModule
+from ansible.parsing.yaml.objects import AnsibleSequence
 from ansible_api.callback import CallbackModule
 from ansible_api.websocket import message
 import tornado.gen
 
-# rewrite init for adding stdout_callback
+class DataLoaderV2(DataLoader):
+
+    def __init__(self, play_name):
+        DataLoader.__init__(self)
+        self._playname = play_name
+
+    def load_from_file(self, file_name):
+        result = DataLoader.load_from_file(self, file_name)
+        if isinstance(result, AnsibleSequence):
+            for item in result:
+                item['name'] = self._playname
+        return result
+
+
 class PlaybookExecutorV2(PlaybookExecutor):
 
     def __init__(self, playbooks, inventory, variable_manager, loader, options, passwords):
@@ -96,10 +110,10 @@ class Api(object):
         return {'rc': rc, 'detail': tqm._stdout_callback.std_lines}
 
     @staticmethod
-    def runPlaybook(yml_file, myvars, forks):
+    def runPlaybook(palyname, yml_file, myvars, forks):
         # initialize needed objects
         variable_manager = VariableManager()
-        loader = DataLoader()
+        loader = DataLoaderV2(palyname)
         Options = namedtuple('Options', ['listtags', 'listtasks', 'listhosts',
                                          'syntax', 'connection', 'module_path', 'forks', 'remote_user',
                                          'private_key_file', 'ssh_common_args', 'ssh_extra_args',

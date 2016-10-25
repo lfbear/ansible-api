@@ -113,6 +113,7 @@ class Playbook(Controller):
     @tornado.gen.coroutine
     def post(self):
         data = Tool.parsejson(self.request.body)
+        name = data['n']
         hosts = data['h']
         sign = data['s']
         yml_file = data['f']
@@ -121,7 +122,7 @@ class Playbook(Controller):
             self.write(Tool.jsonal(
                 {'error': "Lack of necessary parameters", 'rc': Tool.ERRCODE_SYS}))
         else:
-            hotkey = hosts + yml_file + Config.Get('sign_key')
+            hotkey = name + hosts + yml_file + Config.Get('sign_key')
             check_str = Tool.getmd5(hotkey)
             if sign != check_str:
                 self.write(Tool.jsonal(
@@ -138,7 +139,7 @@ class Playbook(Controller):
                     Tool.reporting("playbook: {0}, host: {1}, forks: {2}".format(
                         yml_file, hosts, forks))
                     try:
-                        response = yield executor.submit(Api.runPlaybook, yml_file=yml_file, myvars=myvars, forks=forks)
+                        response = yield executor.submit(Api.runPlaybook, palyname=name,yml_file=yml_file, myvars=myvars, forks=forks)
                     except BaseException as e:
                         Tool.reporting(
                             "A {0} error occurs: {1}".format(type(e), e.message))
