@@ -101,12 +101,11 @@ class Api(object):
                 passwords=passwords,
                 stdout_callback=CallbackModule(),
             )
-            tqm._stdout_callback.reset_output()
+            #tqm._stdout_callback.reset_output()
             rc = tqm.run(play)
         finally:
             if tqm is not None:
                 tqm.cleanup()
-
         return {'rc': rc, 'detail': tqm._stdout_callback.std_lines}
 
     @staticmethod
@@ -137,5 +136,6 @@ class Api(object):
         pbex = PlaybookExecutorV2(playbooks=[yml_file],
                                   inventory=inventory, variable_manager=variable_manager, loader=loader,
                                   options=pb_options, passwords=passwords)
+        #pbex._tqm._stdout_callback.reset_output()
         rc = pbex.run()
         return {'rc': rc, 'detail': pbex._tqm._stdout_callback.std_lines}

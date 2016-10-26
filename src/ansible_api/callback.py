@@ -147,6 +147,7 @@ class CallbackModule(CallbackBase):
             msg=dict(kind='play_start', value=palyname)
         )
         message.sendmsg(wsmsg, message.MSGTYPE_NOTICE)
+        self.reset_output()
 
     #--- maybe those callback function following will help you ---#
 
