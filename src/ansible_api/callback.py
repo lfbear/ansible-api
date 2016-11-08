@@ -27,9 +27,12 @@ class CallbackModule(CallbackBase):
     RC_SUCC = 0
     RC_FAIL = 1
 
-    current_taskname = ''
-    item_status = ('failed', 'changed', 'skipped', 'unreachable', 'ok')
-    std_lines = dict()
+    ITEM_STATUS = ('failed', 'changed', 'skipped', 'unreachable', 'ok')
+
+    def __init__(self):
+        super(CallbackModule,self).__init__()
+        self.current_taskname = ''
+        self.std_lines = dict()
 
     def reset_output(self):
         self.std_lines.clear()
@@ -98,7 +101,7 @@ class CallbackModule(CallbackBase):
         if detail.get('rc'):
             item['rc'] = detail['rc']
 
-        for s in self.item_status:
+        for s in self.ITEM_STATUS:
             if detail.get(s):
                 item[s] = detail[s]
                 if s in ('failed', 'unreachable'):

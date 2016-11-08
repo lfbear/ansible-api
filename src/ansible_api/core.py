@@ -101,12 +101,15 @@ class Api(object):
                 passwords=passwords,
                 stdout_callback=CallbackModule(),
             )
+
             #tqm._stdout_callback.reset_output()
             rc = tqm.run(play)
+            detail = tqm._stdout_callback.std_lines
+            #tqm._stdout_callback.reset_output()
         finally:
             if tqm is not None:
                 tqm.cleanup()
-        return {'rc': rc, 'detail': tqm._stdout_callback.std_lines}
+        return {'rc': rc, 'detail': detail}
 
     @staticmethod
     def runPlaybook(palyname, yml_file, myvars, forks):
