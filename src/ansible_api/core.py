@@ -23,6 +23,7 @@ from ansible_api.callback import CallbackModule
 from ansible_api.websocket import message
 import tornado.gen
 
+# new DataLoader for renaming playbook's name
 class DataLoaderV2(DataLoader):
 
     def __init__(self, play_name):
@@ -36,7 +37,7 @@ class DataLoaderV2(DataLoader):
                 item['name'] = self._playname
         return result
 
-
+# new PlaybookExecutor for adding callback
 class PlaybookExecutorV2(PlaybookExecutor):
 
     def __init__(self, playbooks, inventory, variable_manager, loader, options, passwords):
@@ -102,10 +103,10 @@ class Api(object):
                 stdout_callback=CallbackModule(),
             )
 
-            #tqm._stdout_callback.reset_output()
+            # tqm._stdout_callback.reset_output()
             rc = tqm.run(play)
             detail = tqm._stdout_callback.std_lines
-            #tqm._stdout_callback.reset_output()
+            # tqm._stdout_callback.reset_output()
         finally:
             if tqm is not None:
                 tqm.cleanup()
@@ -139,6 +140,6 @@ class Api(object):
         pbex = PlaybookExecutorV2(playbooks=[yml_file],
                                   inventory=inventory, variable_manager=variable_manager, loader=loader,
                                   options=pb_options, passwords=passwords)
-        #pbex._tqm._stdout_callback.reset_output()
+        # pbex._tqm._stdout_callback.reset_output()
         rc = pbex.run()
         return {'rc': rc, 'detail': pbex._tqm._stdout_callback.std_lines}

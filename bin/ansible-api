@@ -18,16 +18,34 @@ from ansible_api.config import Config
 from ansible_api.webapi import WebApi
 
 if __name__ == "__main__":
+    try:
+        opts, args = getopt.getopt(sys.argv[1:], 'c:d')
+    except getopt.GetoptError:
+        print (
+            '%s -c [Configfile, Optional] -d [Daemon Mode, Optional]' % sys.argv[0])
+        sys.exit(1)
 
-    opts, args = getopt.getopt(sys.argv[1:], 'd')
-    print('Ansible API is running in', end=' ')
-    if ('-d', '') in opts:
-        Tool.LOG_REPORT_HANDERL = open(Config.Get('log_path'), 'a')
-        Tool.reporting(
-            ' '.join(['Start...', '(', 'PID =', str(os.getpid()), ')']))
+    daemon_mode = False
+
+    for opt in opts:
+        if opt[0] == '-c' and os.path.isfile(opt[1]):
+            Config.cfg_path = opt[1]
+            print('Info: Load config file from %s' % Config.cfg_path)
+        if opt[0] == '-d':
+            daemon_mode = True
+
+    print('\033[1;32mAnsible API is running at', end=' ')
+    if daemon_mode:
+        log_path = Config.Get('log_path')
         print('Daemon Mode')
     else:
+        log_path = None
         print('Debug Mode')
+    print('\033[0m')
+
+    Tool.init_logger(log_path)
+    Tool.LOGGER.info(
+        ' '.join(['Ansible API', 'Start...', '(', 'PID =', str(os.getpid()), ')']))
 
     app = WebApi()
     app.start()

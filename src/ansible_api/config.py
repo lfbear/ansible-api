@@ -9,15 +9,17 @@
 from __future__ import (absolute_import, division, print_function)
 __metaclass__ = type
 
+import os
 try:
     import ConfigParser
-except ImportError: # python 3
+except ImportError:  # python 3
     import configparser as ConfigParser
 
 __all__ = ['Config']
 
 
 class Config(object):
+    cfg_path = '/etc/ansible/api.cfg'
     host = '127.0.0.1'
     port = 8765
     sign_key = 'YOUR_SIGNATURE_KEY_HERE'
@@ -31,8 +33,7 @@ class Config(object):
 
     def __init__(self):
         cf = ConfigParser.ConfigParser()
-
-        cf.read('/etc/ansible/api.cfg')
+        cf.read(Config.cfg_path)
         try:
             cf.options('default')
         except:

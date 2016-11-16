@@ -9,6 +9,7 @@
 from __future__ import (absolute_import, division, print_function)
 __metaclass__ = type
 
+from ansible_api.tool import Tool
 from ansible.plugins.callback import CallbackBase
 from ansible_api.websocket import message
 from ansible.executor.task_result import TaskResult as TypeTaskResult
@@ -30,7 +31,7 @@ class CallbackModule(CallbackBase):
     ITEM_STATUS = ('failed', 'changed', 'skipped', 'unreachable', 'ok')
 
     def __init__(self):
-        super(CallbackModule,self).__init__()
+        super(CallbackModule, self).__init__()
         self.current_taskname = ''
         self.std_lines = dict()
 
@@ -91,7 +92,8 @@ class CallbackModule(CallbackBase):
                 )
                 message.sendmsg(wsmsg, message.MSGTYPE_NOTICE)
             else:
-                print('Found a new type in result [%s]' % (type(crucial)))
+                Tool.LOGGER.warning(
+                    'Found a new type in result [%s]' % (type(crucial)))
 
     def _fill_item_from_taskresult(self, init_data, detail):
         item = dict()

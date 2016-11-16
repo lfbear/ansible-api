@@ -16,6 +16,7 @@ from ansible_api.config import Config
 from ansible_api import controller
 from ansible_api import websocket
 
+
 class WebApi(object):
 
     def __init__(self):
