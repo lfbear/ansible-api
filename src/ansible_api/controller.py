@@ -77,9 +77,9 @@ class Command(Controller):
         data = Tool.parsejson(self.request.body)
         badcmd = ['reboot', 'su', 'sudo', 'dd',
                   'mkfs', 'shutdown', 'half', 'top']
-        name = data['n']
+        name = data['n'].encode('utf-8')
         module = data['m']
-        arg = data['a']
+        arg = data['a'].encode('utf-8')
         target = data['t']
         sign = data['s']
         sudo = True if data['r'] else False
@@ -113,10 +113,10 @@ class Playbook(Controller):
     @tornado.gen.coroutine
     def post(self):
         data = Tool.parsejson(self.request.body)
-        name = data['n']
+        name = data['n'].encode('utf-8')
         hosts = data['h']
         sign = data['s']
-        yml_file = data['f']
+        yml_file = data['f'].encode('utf-8')
         forks = data.get('c', 50)
         if not hosts or not yml_file or not sign:
             self.write(Tool.jsonal(
@@ -155,6 +155,7 @@ class Playbook(Controller):
 
 class FileList(Controller):
 
+    @tornado.gen.coroutine
     def get(self):
         path = self.get_argument('type', 'script')
         sign = self.get_argument('sign', '')
@@ -169,7 +170,8 @@ class FileList(Controller):
                 path_var = Config.Get('dir_' + path)
                 if os.path.exists(path_var):
                     Tool.reporting("read file list: " + path_var)
-                    dirs = os.listdir(path_var)
+                    dirs = yield executor.submit(os.listdir,path_var)
+                    #dirs = os.listdir(path_var)
                     self.write({'list': dirs})
                 else:
                     self.write(Tool.jsonal(
@@ -181,6 +183,7 @@ class FileList(Controller):
 
 class FileReadWrite(Controller):
 
+    @tornado.gen.coroutine
     def get(self):
         path = self.get_argument('type', 'script')
         file_name = self.get_argument('name')
@@ -195,13 +198,8 @@ class FileReadWrite(Controller):
             else:
                 file_path = Config.Get('dir_' + path) + file_name
                 if os.path.isfile(file_path):
-                    file_object = open(file_path)
-                    try:
-                        Tool.reporting("read from file: " + file_path)
-                        contents = file_object.read()
-                        self.write(Tool.jsonal({'content': contents}))
-                    finally:
-                        file_object.close()
+                    contents = yield executor.submit(self.read_file,file_path)
+                    self.write(Tool.jsonal({'content': contents}))
                 else:
                     self.write(Tool.jsonal(
                         {'error': "No such file in script path", 'rc': Tool.ERRCODE_BIZ}))
@@ -209,11 +207,25 @@ class FileReadWrite(Controller):
             self.write(Tool.jsonal(
                 {'error': "Wrong type in argument", 'rc': Tool.ERRCODE_SYS}))
 
+    @classmethod
+    def read_file(self,file_path):
+        file_object = open(file_path)
+        try:
+            Tool.reporting("read from file: " + file_path)
+            contents = file_object.read()
+        except BaseException as err:
+             Tool.reporting("[failed] read from file: " + file_path)
+             contents = ''
+        finally:
+            file_object.close()
+        return contents
+
+    @tornado.gen.coroutine
     def post(self):
         data = Tool.parsejson(self.request.body)
         path = data['p']
         filename = data['f']
-        content = data['c']
+        content = data['c'].encode('utf-8')
         sign = data['s']
         if not filename or not content or not sign or path \
                 not in ['script', 'playbook', 'authkeys']:
@@ -229,12 +241,21 @@ class FileReadWrite(Controller):
             if path == 'authkeys':  # allow mkdir in this mode
                 dir_name = os.path.dirname(file_path)
                 os.path.isdir(dir_name) == False and os.mkdir(dir_name)
+            result = yield executor.submit(self.write_file,file_path,content)
+            self.write(Tool.jsonal({'ret': result}))
+
+    def write_file(self,file_path,content):
+        result = True
+        try:
             file_object = open(file_path, 'w')
             file_object.write(content)
-            file_object.close()
+        except BaseException as err:
+            result = False
+            Tool.reporting("[failed] write to file: " + file_path)
+        else:
             Tool.reporting("write to file: " + file_path)
-            self.write(Tool.jsonal({'ret': True}))
-
+            file_object.close()
+        return result
 
 class FileExist(Controller):
 
@@ -263,6 +284,7 @@ class FileExist(Controller):
 
 class ParseVarsFromFile(Controller):
 
+    @tornado.gen.coroutine
     def get(self):
         file_name = self.get_argument('name')
         sign = self.get_argument('sign', '')
@@ -274,29 +296,29 @@ class ParseVarsFromFile(Controller):
         else:
             file_path = Config.Get('dir_playbook') + file_name
             if os.path.isfile(file_path):
-                file_object = open(file_path)
-                env = Environment()
-                try:
-                    Tool.reporting("parse from file: " + file_path)
-                    contents = file_object.read()
-                    ignore_vars = []
-                    yamlstream = yaml.load(contents)
-                    for yamlitem in yamlstream:
-                        if isinstance(yamlitem, dict) and yamlitem.get('vars_files', []) and len(yamlitem['vars_files']) > 0:
-                            for vf in yamlitem['vars_files']:
-                                tmp_file = Config.Get('dir_playbook') + vf
-                                if os.path.isfile(tmp_file):
-                                    tmp_vars = yaml.load(file(tmp_file))
-                                    if isinstance(tmp_vars, dict):
-                                        ignore_vars += tmp_vars.keys()
-                    if len(ignore_vars) > 0:
-                        Tool.reporting("skip vars: " + ",".join(ignore_vars))
-                    ast = env.parse(contents)
-                    var = list(meta.find_undeclared_variables(ast))
-                    var = list(set(var).difference(set(ignore_vars)))
-                    self.write({'vars': var})
-                finally:
-                    file_object.close()
+                Tool.reporting("parse from file: " + file_path)
+                var = yield executor.submit(self.parse_vars,file_path)
+                self.write({'vars': var})
             else:
                 self.write(Tool.jsonal(
                     {'error': "No such file in script path", 'rc': Tool.ERRCODE_SYS}))
+
+    def parse_vars(self,file_path):
+        contents = FileReadWrite.read_file(file_path)
+        env = Environment()
+        ignore_vars = []
+        yamlstream = yaml.load(contents)
+        for yamlitem in yamlstream:
+            if isinstance(yamlitem, dict) and yamlitem.get('vars_files', []) and len(yamlitem['vars_files']) > 0:
+                for vf in yamlitem['vars_files']:
+                    tmp_file = Config.Get('dir_playbook') + vf
+                    if os.path.isfile(tmp_file):
+                        tmp_vars = yaml.load(file(tmp_file))
+                        if isinstance(tmp_vars, dict):
+                            ignore_vars += tmp_vars.keys()
+        if len(ignore_vars) > 0:
+            Tool.reporting("skip vars: " + ",".join(ignore_vars))
+        ast = env.parse(contents)
+        var = list(meta.find_undeclared_variables(ast))
+        var = list(set(var).difference(set(ignore_vars)))
+        return var

@@ -48,8 +48,8 @@ class CallbackModule(CallbackBase):
             if isinstance(crucial, TypeTaskResult):
                 item = self._fill_item_from_taskresult(
                     init_data=dict(
-                        host=crucial._host.get_name().encode('utf-8'),
-                        task_name=crucial._task.get_name().encode('utf-8'),
+                        host=crucial._host.get_name(),
+                        task_name=crucial._task.get_name(),
                         rc=self.RC_SUCC
                     ), detail=crucial._result)
 
@@ -87,7 +87,7 @@ class CallbackModule(CallbackBase):
                 wsmsg = dict(
                     rc=self.RC_SUCC,
                     task_name=self.current_taskname,
-                    msg=dict(kind='desc', unique=crucial.encode('utf-8'))
+                    msg=dict(kind='desc', unique=crucial)
                 )
                 message.sendmsg(wsmsg, message.MSGTYPE_NOTICE)
             else:
@@ -108,13 +108,13 @@ class CallbackModule(CallbackBase):
                     item['rc'] = self.RC_FAIL
 
         if detail.get('stdout') and detail['stdout'] != '':
-            item['stdout'] = detail['stdout'].encode('utf-8')
+            item['stdout'] = detail['stdout']
 
         if detail.get('stderr') and detail['stderr'] != '':
-            item['stderr'] = detail['stderr'].encode('utf-8')
+            item['stderr'] = detail['stderr']
 
         if detail.get('msg') and detail['msg'] != '':
-            item['msg'] = detail['msg'].encode('utf-8')
+            item['msg'] = detail['msg']
 
         if detail.get('invocation') and detail['invocation'].get('module_args') and detail['invocation']['module_args'].get('_raw_params'):
             item['cmd'] = detail['invocation'][
@@ -127,7 +127,7 @@ class CallbackModule(CallbackBase):
         wsmsg = dict(
             rc=self.RC_SUCC,
             task_name=self.current_taskname,
-            msg=dict(kind='task_start', value=task.get_name().encode('utf-8'))
+            msg=dict(kind='task_start', value=task.get_name())
         )
         message.sendmsg(wsmsg, message.MSGTYPE_NOTICE)
 
@@ -141,7 +141,7 @@ class CallbackModule(CallbackBase):
             h = h_str.split(',')
             host = list(set(host + h))
 
-        self.current_taskname = palyname.encode('utf-8')
+        self.current_taskname = palyname
         wsmsg = dict(
             rc=self.RC_SUCC,
             task_name=palyname,
