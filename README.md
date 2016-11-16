@@ -8,15 +8,19 @@ If you are trying to use it and not like CLI mode, you can try me now. This is a
 ## Changelog
 
 - 0.2.0 support websocket, remove code invaded in ansible
+- 0.2.1 optimize log and allow mutil-instance in the same host
 
 ## How to install
 python setup.py install
 
 ## How to use it
 
-- configuration: /etc/ansible/api.cfg
-- start in deamon mode: ansible-api -d >> /var/log/ansible-api-process.log 2>&1 &
-- start in debug mode: ansible-api
+- default configuration: /etc/ansible/api.cfg
+- start: 
+```
+ansible-api -c [Configfile, Optional] -d [Daemon Mode, Optional]
+```
+eg: ansible-api -c /etc/ansible/api.cfg -d > /dev/null &
 
 ## How to prepare your data
 
