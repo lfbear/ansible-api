@@ -67,13 +67,13 @@ class message(websocket.WebSocketHandler):
     def on_close(self):
         if self in message.DEFAULT_POOL:
             message.DEFAULT_POOL.remove(self)
-            Tool.LOGGER.debug("[offline]DEFAULT, current: %d" %
+            Tool.LOGGER.debug("offline@DEFAULT, current: %d" %
                               len(message.DEFAULT_POOL))
 
         for k in message.SBU_POOL:
             if len(message.SBU_POOL[k]) and self in message.SBU_POOL[k]:
                 message.SBU_POOL[k].remove(self)
-                Tool.LOGGER.debug("[offline]%s, current: %d" %
+                Tool.LOGGER.debug("offline@%s, current: %d" %
                                   (k, len(message.SBU_POOL[k])))
 
     @classmethod
