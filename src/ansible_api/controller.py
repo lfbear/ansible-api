@@ -83,9 +83,9 @@ class Command(Controller):
         data = Tool.parsejson(self.request.body)
         badcmd = ['reboot', 'su', 'sudo', 'dd',
                   'mkfs', 'shutdown', 'half', 'top']
-        name = data['n'].encode('utf-8')
+        name = data['n'].encode('utf-8').decode()
         module = data['m']
-        arg = data['a'].encode('utf-8')
+        arg = data['a'].encode('utf-8').decode()
         target = data['t']
         sign = data['s']
         sudo = True if data['r'] else False
@@ -119,10 +119,10 @@ class Playbook(Controller):
     @tornado.gen.coroutine
     def post(self):
         data = Tool.parsejson(self.request.body)
-        name = data['n'].encode('utf-8')
+        name = data['n'].encode('utf-8').decode()
         hosts = data['h']
         sign = data['s']
-        yml_file = data['f'].encode('utf-8')
+        yml_file = data['f'].encode('utf-8').decode()
         forks = data.get('c', 50)
         if not hosts or not yml_file or not sign:
             self.write(Tool.jsonal(
@@ -231,7 +231,7 @@ class FileReadWrite(Controller):
         data = Tool.parsejson(self.request.body)
         path = data['p']
         filename = data['f']
-        content = data['c'].encode('utf-8')
+        content = data['c'].encode('utf-8').decode()
         sign = data['s']
         if not filename or not content or not sign or path \
                 not in ['script', 'playbook', 'authkeys']:
