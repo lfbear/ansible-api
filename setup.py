@@ -20,13 +20,16 @@ from ansible_api import __version__
 class CustomInstall(install):
 
     _configfiles = [('/etc/ansible/', ['data/api.cfg'])]
+    _pluginfiles = [('plugins/connection', ['data/multipoller.py'])]
 
     def run(self):
         path = os.path.dirname(ansible.__file__)
         if LooseVersion(ansible.__version__) > LooseVersion('2.0.0'):
             install.run(self)
+            self.init_plugin_file(path)
             self.init_config_file()
-            print("\033[1;37mAnsible-api v%s install complete.\033[0m" % __version__)
+            print("\033[1;37mAnsible-api v%s install complete.\033[0m" %
+                  __version__)
         else:
             print("Error: ansible version " + ansible.__version__ + " < 2.0.0")
 
@@ -37,9 +40,22 @@ class CustomInstall(install):
                 file = os.path.join(path, os.path.basename(f))
                 if not os.path.isfile(file):
                     os.system(' '.join(['cp', f, file]))
-                    print("\033[1;36mConfiguration file: %s has been copied\033[0m" % file)
+                    print(
+                        "\033[1;36mConfiguration file: %s has been copied\033[0m" % file)
                 else:
-                    print("\033[4;37mConfiguration file exists: %s\033[0m" % file)
+                    print(
+                        "\033[4;37mConfiguration file exists: %s\033[0m" % file)
+
+    def init_plugin_file(self, ansible_path):
+        for p in self._pluginfiles:
+            path = p[0]
+            if path[0:1] != '/':
+                path = os.path.join(ansible_path, path)
+            for f in p[1]:
+                file = os.path.join(path, os.path.basename(f))
+                os.system(' '.join(['cp', f, file]))
+                print("Plugin file: %s copy successfully" % file)
+
 try:
     import ansible
     setup(
@@ -48,7 +64,7 @@ try:
         scripts=['bin/ansible-api'],
         package_dir={'': 'src'},
         packages=find_packages('src'),
-        install_requires=['tornado>=4.3', 'ansible>=2.0.0','futures'],
+        install_requires=['tornado>=4.3', 'ansible>=2.0.0', 'futures'],
         cmdclass={'install': CustomInstall},
 
         author="lfbear",
