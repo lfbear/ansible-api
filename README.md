@@ -27,4 +27,4 @@ eg: ansible-api -c /etc/ansible/api.cfg -d > /dev/null &
 [HTTP API Usage](https://github.com/lfbear/ansible-api/wiki/http-api-usage)
 
 ## If you have hundreds of machines, suggest
-[HTTP API Usage](https://github.com/lfbear/ansible-api/wiki/ValueError:-filedescriptor-out-of-range-in-select())
+[filedescriptor out of range in select()](https://github.com/lfbear/ansible-api/wiki/ValueError:-filedescriptor-out-of-range-in-select())
