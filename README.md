@@ -25,3 +25,6 @@ eg: ansible-api -c /etc/ansible/api.cfg -d > /dev/null &
 ## How to prepare your data
 
 [HTTP API Usage](https://github.com/lfbear/ansible-api/wiki/http-api-usage)
+
+## If you have hundreds of machines, suggest
+[HTTP API Usage](https://github.com/lfbear/ansible-api/wiki/ValueError:-filedescriptor-out-of-range-in-select())
