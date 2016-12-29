@@ -7,8 +7,8 @@ If you are trying to use it and not like CLI mode, you can try me now. This is a
 
 ## Changelog
 
-- 0.2.0 support websocket, remove code invaded in ansible
 - 0.2.1 optimize log and allow mutil-instance in the same host
+- 0.2.0 support websocket, remove code invaded in ansible
 
 ## How to install
 python setup.py install
