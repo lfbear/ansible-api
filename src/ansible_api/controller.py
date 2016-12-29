@@ -106,10 +106,9 @@ class Command(Controller):
                 try:
                     response = yield executor.submit(Api.runCmd, name=name, target=target, module=module, arg=arg, sudo=sudo, forks=forks)
                 except BaseException as e:
-                    Tool.LOGGER.error(
-                        "A {0} error occurs: {1}".format(type(e), e.message))
+                    Tool.LOGGER.exception('A serious error occurs')
                     self.write(Tool.jsonal(
-                        {'error': e.message, 'rc': ErrorCode.ERRCODE_BIZ}))
+                        {'error': str(e), 'rc': ErrorCode.ERRCODE_BIZ}))
                 else:
                     self.write(response)
 
@@ -147,10 +146,9 @@ class Playbook(Controller):
                     try:
                         response = yield executor.submit(Api.runPlaybook, palyname=name, yml_file=yml_file, myvars=myvars, forks=forks)
                     except BaseException as e:
-                        Tool.LOGGER.error(
-                            "A {0} error occurs: {1}".format(type(e), e.message))
+                        Tool.LOGGER.exception('A serious error occurs')
                         self.write(Tool.jsonal(
-                            {'error': e.message, 'rc': ErrorCode.ERRCODE_BIZ}))
+                            {'error': str(e), 'rc': ErrorCode.ERRCODE_BIZ}))
                     else:
                         self.write(response)
 
