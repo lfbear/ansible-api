@@ -33,7 +33,7 @@ __all__ = [
     'AsyncTest',
 ]
 
-executor = futures.ThreadPoolExecutor(Config.Get('thread_pool_size'))
+executor = futures.ThreadPoolExecutor(int(Config.Get('thread_pool_size')))
 
 
 class ErrorCode(object):
