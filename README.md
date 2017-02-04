@@ -11,8 +11,9 @@ If you are trying to use it and not like CLI mode, you can try me now. This is a
 - 0.2.0 support websocket, remove code invaded in ansible
 
 ## How to install
+- prepared: pip install tornado
 - git clone https://github.com/lfbear/ansible-api.git
-- python setup.py install
+- cd ansible-api; python setup.py install
 
 ## How to use it
 
