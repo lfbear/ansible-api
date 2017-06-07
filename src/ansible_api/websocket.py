@@ -93,8 +93,19 @@ class message(websocket.WebSocketHandler):
 
         msg['type'] = type
         msg['ctime'] = time.strftime('%Y-%m-%d %H:%M:%S', time.localtime())
-        Tool.LOGGER.debug(
-            "\033[0;33m[%s@websocket] %s\033[0m" % (msg_pool, msg))
+
+        if msg['rc'] == 0:
+            if msg.get('type') == message.MSGTYPE_INFO:
+                info = "%s\t%s\t%s\t%s\tOK" % (msg_pool, msg.get('task_name'), msg.get('task_id'), msg.get('msg').get('host'))
+            elif msg.get('type') == message.MSGTYPE_NOTICE:
+                info = "%s\t%s\t%s\t%s\t%s" % (msg_pool, msg.get('task_name'), msg.get('task_id'), msg.get('msg').get('kind'), msg.get('msg').get('value'))
+            else:
+                info = "%s\t%s" % (msg_pool, msg)
+            Tool.LOGGER.info("ANSIBLE_DETAIL\t%s" % info)
+        else:
+            Tool.LOGGER.warning("ANSIBLE_DETAIL\t%s\t\033[0;33m%s\033[0m" % (msg_pool, msg))
+        Tool.LOGGER.debug("\033[0;30m[%s@websocket] %s\033[0m" % (msg_pool, msg))
+        
         target = []
         if msg_pool == '#DEAULT#':
             target = self.DEFAULT_POOL

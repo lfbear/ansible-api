@@ -47,5 +47,8 @@ if __name__ == "__main__":
     Tool.LOGGER.info(
         ' '.join(['Ansible API', 'Start...', '(', 'PID =', str(os.getpid()), ')']))
 
-    app = WebApi()
-    app.start()
+    try:
+        app = WebApi()
+        app.start()
+    except Exception as e:
+        Tool.LOGGER.exception(e)
