@@ -13,8 +13,7 @@ If you are trying to use it and not like CLI mode, you can try me now. This is a
 
 ## How to install
 - prepared: pip install tornado
-- git clone https://github.com/lfbear/ansible-api.git
-- cd ansible-api; python setup.py install
+- pip install git+https://github.com/lfbear/ansible-api.git
 
 ## How to use it
 
