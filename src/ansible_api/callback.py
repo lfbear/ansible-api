@@ -138,7 +138,8 @@ class CallbackModule(CallbackBase):
         task = list()
         host = list()
         for t in play.get_tasks():
-            task = list(set(task + t))
+            tmp = [i.get_name() for i in t]
+            task = list(set(task + tmp))
         for h_str in play._attributes.get('hosts'):
             h = h_str.split(',')
             host = list(set(host + h))
@@ -147,8 +148,8 @@ class CallbackModule(CallbackBase):
         wsmsg = dict(
             rc=self.RC_SUCC,
             task_name=palyname,
-            task_count=len(task),
-            host_count=len(host),
+            task_list = task,
+            host_list = host,
             msg=dict(kind='play_start', value=palyname)
         )
         message.sendmsg(wsmsg, message.MSGTYPE_NOTICE)
