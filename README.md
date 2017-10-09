@@ -1,5 +1,7 @@
 # ansible-api
 A restful http api for ansible 2.x
+- v0.2.0 fit for ansible version<=2.3.x
+- ansible version >= 2.4.x coming soon
 
 ## What is it?
 [Ansible] (https://github.com/ansible/ansible/) is a radically simple IT automation system.
