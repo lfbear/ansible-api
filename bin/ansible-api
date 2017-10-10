@@ -16,10 +16,11 @@ import getopt
 from ansible_api.tool import Tool
 from ansible_api.config import Config
 from ansible_api.webapi import WebApi
+from ansible_api import __version__
 
 if __name__ == "__main__":
     try:
-        opts, args = getopt.getopt(sys.argv[1:], 'c:d')
+        opts, args = getopt.getopt(sys.argv[1:], 'c:dV')
     except getopt.GetoptError:
         print (
             '%s -c [Configfile, Optional] -d [Daemon Mode, Optional]' % sys.argv[0])
@@ -28,6 +29,9 @@ if __name__ == "__main__":
     daemon_mode = False
 
     for opt in opts:
+        if opt[0] == '-V':
+            print("Ansible API - Version %s" % __version__)
+            exit(0)
         if opt[0] == '-c' and os.path.isfile(opt[1]):
             Config.cfg_path = opt[1]
             print('Info: Load config file from %s' % Config.cfg_path)
