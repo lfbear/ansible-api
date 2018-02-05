@@ -33,9 +33,9 @@ class message(websocket.WebSocketHandler):
         return True
 
     def select_subprotocol(self, subprotocols):
-        sub_str = ''
+        selected = None
         if len(subprotocols):
-            sub_str = ''.join(subprotocols)
+            selected = subprotocols[0]
             for p in subprotocols:
                 if p == '':
                     continue
@@ -45,7 +45,7 @@ class message(websocket.WebSocketHandler):
                 Tool.LOGGER.debug("online@%s, current: %d" %
                                   (p, len(message.SBU_POOL[p])))
 
-        return sub_str
+        return selected
 
     def open(self):
         if self.request.headers.get("Sec-WebSocket-Protocol") == None:
