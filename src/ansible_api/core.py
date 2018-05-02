@@ -15,6 +15,7 @@ from ansible.parsing.dataloader import DataLoader
 from ansible.vars import VariableManager
 from ansible.inventory import Inventory
 from ansible.playbook.play import Play
+from ansible.parsing.splitter import parse_kv
 from ansible.executor.task_queue_manager import TaskQueueManager
 from ansible.executor.playbook_executor import PlaybookExecutor
 #from ansible.plugins.callback.default import CallbackModule
@@ -82,13 +83,13 @@ class Api(object):
         inventory = Inventory(
             loader=loader, variable_manager=variable_manager)
         variable_manager.set_inventory(inventory)
-
+        check_raw = module in ('command', 'shell', 'script', 'raw')
         # create play with tasks
         play_source = dict(
             name=name,  # likes this "taskname#taskid_123@projectname",
             hosts=target,
             gather_facts='no',
-            tasks=[dict(action=dict(module=module, args=arg))]
+            tasks=[dict(action=dict(module=module, args=parse_kv(arg,check_raw)))]
         )
         play = Play().load(play_source, variable_manager=variable_manager, loader=loader)
 
