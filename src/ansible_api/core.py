@@ -89,7 +89,7 @@ class Api(object):
             name=name,  # likes this "taskname#taskid_123@projectname",
             hosts=target,
             gather_facts='no',
-            tasks=[dict(action=dict(module=module, args=parse_kv(arg,check_raw)))]
+            tasks=[dict(action=dict(module=module, args=parse_kv(arg,check_raw=check_raw)))]
         )
         play = Play().load(play_source, variable_manager=variable_manager, loader=loader)
 
