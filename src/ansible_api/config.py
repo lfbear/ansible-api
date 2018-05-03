@@ -29,7 +29,6 @@ class Config(object):
 
     dir_script = ''
     dir_playbook = ''
-    dir_authkeys = ''
 
     def __init__(self):
         cf = ConfigParser.ConfigParser()
@@ -61,8 +60,6 @@ class Config(object):
                 self.dir_script = cf.get('directory', 'script')
             if (cf.has_option('directory', 'playbook')):
                 self.dir_playbook = cf.get('directory', 'playbook')
-            if (cf.has_option('directory', 'authkeys')):
-                self.dir_authkeys = cf.get('directory', 'authkeys')
 
     @staticmethod
     def Get(attr):

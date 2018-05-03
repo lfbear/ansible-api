@@ -163,7 +163,7 @@ class FileList(Controller):
     def get(self):
         path = self.get_argument('type', 'script')
         sign = self.get_argument('sign', '')
-        allows = ['script', 'playbook', 'authkeys']
+        allows = ['script', 'playbook']
         if path in allows:
             hotkey = path + Config.Get('sign_key')
             check_str = Tool.getmd5(hotkey)
@@ -192,7 +192,7 @@ class FileReadWrite(Controller):
         path = self.get_argument('type', 'script')
         file_name = self.get_argument('name')
         sign = self.get_argument('sign', '')
-        allows = ['script', 'playbook', 'authkeys']
+        allows = ['script', 'playbook']
         if path in allows:
             hotkey = path + file_name + Config.Get('sign_key')
             check_str = Tool.getmd5(hotkey)
@@ -232,7 +232,7 @@ class FileReadWrite(Controller):
         content = data['c'].encode('utf-8').decode()
         sign = data['s']
         if not filename or not content or not sign or path \
-                not in ['script', 'playbook', 'authkeys']:
+                not in ['script', 'playbook']:
             self.write(Tool.jsonal(
                 {'error': "Lack of necessary parameters", 'rc': ErrorCode.ERRCODE_SYS}))
         hotkey = path + filename + Config.Get('sign_key')
@@ -242,9 +242,6 @@ class FileReadWrite(Controller):
                 {'error': "Sign is error", 'rc': ErrorCode.ERRCODE_BIZ}))
         else:
             file_path = Config.Get('dir_' + path) + filename
-            if path == 'authkeys':  # allow mkdir in this mode
-                dir_name = os.path.dirname(file_path)
-                os.path.isdir(dir_name) == False and os.mkdir(dir_name)
             result = yield executor.submit(self.write_file, file_path, content)
             self.write(Tool.jsonal({'ret': result}))
 
