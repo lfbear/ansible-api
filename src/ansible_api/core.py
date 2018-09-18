@@ -49,7 +49,11 @@ class PlaybookExecutorV2(PlaybookExecutor):
 class Api(object):
 
     @staticmethod
-    def run_cmd(name, sources, module, arg, sudo, forks):
+    def run_cmd(name, host_list, module, arg, sudo, forks):
+        sources = ','.join(host_list)
+        if len(host_list) == 1:
+            sources += ','
+
         # initialize needed objects
         Options = namedtuple('Options', ['connection', 'module_path', 'forks', 'remote_user',
                                          'private_key_file', 'ssh_common_args', 'ssh_extra_args', 'sftp_extra_args',
@@ -74,7 +78,7 @@ class Api(object):
         # create play with tasks
         play_source = dict(
             name=name,  # likes this "taskname#taskid_123@projectname",
-            hosts=sources,
+            hosts=host_list,
             gather_facts='no',
             tasks=[dict(action=dict(module=module, args=parse_kv(arg, check_raw=check_raw)))]
         )

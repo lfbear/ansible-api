@@ -100,8 +100,9 @@ class Command(Controller):
                     {'error': "This is danger shell: " + cmdinfo[0], 'rc': ErrorCode.ERRCODE_BIZ}))
             else:
                 try:
+                    host_list = target.split(",")
                     response = await tornado.ioloop.IOLoop.current().run_in_executor(
-                        None, Api.run_cmd, name=name, sources=target, module=module, arg=arg, sudo=sudo, forks=forks)
+                        None, Api.run_cmd, name, host_list, module, arg, sudo, forks)
                 except BaseException as e:
                     Tool.LOGGER.exception('A serious error occurs')
                     self.write(Tool.jsonal(
@@ -135,7 +136,7 @@ class Playbook(Controller):
                         yml_file, hosts, forks))
                     try:
                         response = await tornado.ioloop.IOLoop.current().run_in_executor(
-                            None, Api.run_play_book, palyname=name, yml_file=yml_file, sources=hosts, forks=forks)
+                            None, Api.run_play_book, name, yml_file, hosts, forks)
                     except BaseException as e:
                         Tool.LOGGER.exception('A serious error occurs')
                         self.write(Tool.jsonal(
