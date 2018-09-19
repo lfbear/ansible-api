@@ -4,7 +4,7 @@
 # A restful HTTP API for ansible by tornado
 # Base on ansible 2.x
 # Github <https://github.com/lfbear/ansible-api>
-# Author: lfbear
+# Author: lfbear, pgder
 
 from __future__ import (absolute_import, division, print_function)
 __metaclass__ = type

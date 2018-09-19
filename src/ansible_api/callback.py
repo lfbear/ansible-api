@@ -54,7 +54,7 @@ class CallbackModule(CallbackBase):
                         rc=self.RC_SUCC
                     ), detail=crucial._result)
 
-                if self.std_lines.get(item['host']) == None:
+                if self.std_lines.get(item['host']) is None:
                     self.std_lines[item['host']] = []
 
                 self.std_lines[item['host']].append(item)
@@ -84,7 +84,7 @@ class CallbackModule(CallbackBase):
                     )
                     wsmsg['rc'] += c
                 message.sendmsg(wsmsg, message.MSGTYPE_NOTICE)
-            elif isinstance(crucial, unicode) or isinstance(crucial, str):
+            elif isinstance(crucial, unicode) or isinstance(crucial, str):  #
                 wsmsg = dict(
                     rc=self.RC_SUCC,
                     task_name=self.current_taskname,

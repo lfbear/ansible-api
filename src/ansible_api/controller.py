@@ -4,7 +4,7 @@
 # A restful HTTP API for ansible by tornado
 # Base on ansible 2.x
 # Github <https://github.com/lfbear/ansible-api>
-# Author: lfbear
+# Author: lfbear, pgder
 
 from __future__ import (absolute_import, division, print_function)
 __metaclass__ = type
@@ -80,7 +80,7 @@ class Command(Controller):
         self.write(Tool.jsonal(
             {'error': "Forbidden in get method", 'rc': ErrorCode.ERRCODE_SYS}))
 
-    async def post(self):
+    async def post(self):    # Change the async method to python3 async, this performance better than gen.coroutine
         data = Tool.parsejson(self.request.body)
         badcmd = ['reboot', 'su', 'sudo', 'dd',
                   'mkfs', 'shutdown', 'half', 'top']
@@ -141,8 +141,9 @@ class Playbook(Controller):
                     Tool.LOGGER.info("playbook: {0}, host: {1}, forks: {2}".format(
                         yml_file, hosts, forks))
                     try:
+                        executor = Load if data["load"] else Average  # Add extra parameters to select the thread pool
                         response = await tornado.ioloop.IOLoop.current().run_in_executor(
-                            Average, Api.run_play_book, name, yml_file, hosts, forks)
+                            executor, Api.run_play_book, name, yml_file, hosts, forks)
                     except BaseException as e:
                         Tool.LOGGER.exception('A serious error occurs')
                         self.write(Tool.jsonal(
@@ -308,7 +309,7 @@ class ParseVarsFromFile(Controller):
                 for vf in yamlitem['vars_files']:
                     tmp_file = Config.Get('dir_playbook') + vf
                     if os.path.isfile(tmp_file):
-                        tmp_vars = yaml.load(file(tmp_file))
+                        tmp_vars = yaml.load(file(tmp_file))      #
                         if isinstance(tmp_vars, dict):
                             ignore_vars += tmp_vars.keys()
         if len(ignore_vars) > 0:
