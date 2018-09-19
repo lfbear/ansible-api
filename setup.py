@@ -69,7 +69,7 @@ try:
 
         author="lfbear",
         author_email="lfbear@gmail.com",
-        description="A restful HTTP API for ansible 2.x by tornado",
+        description="A RESTful HTTP Api for Ansible 2.x",
         license="GPLv3",
         url="https://github.com/lfbear/ansible-api"
     )
