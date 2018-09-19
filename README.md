@@ -1,7 +1,7 @@
 # ansible-api
 A restful http api for ansible 2.x
-- v0.2.x fit for ansible version <= 2.3.x
-- ansible version >= 2.4.x coming soon
+- v0.2.2 fit for ansible version <= 2.3.x
+- v0.2.6 fit for ansible version >= 2.6.x
 
 ## What is it?
 [Ansible] (https://github.com/ansible/ansible/) is a radically simple IT automation system.
@@ -9,6 +9,7 @@ If you are trying to use it and not like CLI mode, you can try me now. This is a
 
 ## Changelog
 
+- 0.2.6 adaptive ansible 2.6.4 and add asynchronization mode
 - 0.2.2 optimize log
 - 0.2.1 optimize log and allow mutil-instance in the same host
 - 0.2.0 support websocket, remove code invaded in ansible
