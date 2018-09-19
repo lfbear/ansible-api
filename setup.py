@@ -2,7 +2,7 @@
 # coding: utf-8
 
 # A restful HTTP API for ansible by tornado
-# Base on ansible 2.x
+# Base on ansible 2.x (>2.6)
 # Github <https://github.com/lfbear/ansible-api>
 # Author: lfbear
 
@@ -64,7 +64,7 @@ try:
         scripts=['bin/ansible-api'],
         package_dir={'': 'src'},
         packages=find_packages('src'),
-        install_requires=['tornado>=4.3', 'ansible>=2.0.0', 'futures'],
+        install_requires=['tornado==5.1', 'ansible==2.6.4', 'futures'],
         cmdclass={'install': CustomInstall},
 
         author="lfbear",
