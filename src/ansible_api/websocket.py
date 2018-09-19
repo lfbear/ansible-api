@@ -4,7 +4,7 @@
 # A restful HTTP API for ansible by tornado
 # Base on ansible 2.x
 # Github <https://github.com/lfbear/ansible-api>
-# Author: lfbear
+# Author: lfbear, pgder
 
 from __future__ import (absolute_import, division, print_function)
 __metaclass__ = type
@@ -13,7 +13,6 @@ from ansible_api.tool import Tool
 from tornado import websocket
 import json
 import time
-import os
 
 
 class message(websocket.WebSocketHandler):
@@ -48,7 +47,7 @@ class message(websocket.WebSocketHandler):
         return selected
 
     def open(self):
-        if self.request.headers.get("Sec-WebSocket-Protocol") == None:
+        if self.request.headers.get("Sec-WebSocket-Protocol") is None:
             message.DEFAULT_POOL.append(self)
             Tool.LOGGER.debug("online@DEFAULT, current: %d" %
                               len(message.DEFAULT_POOL))
@@ -62,7 +61,7 @@ class message(websocket.WebSocketHandler):
             self.write_message(
                 {'type': self.MSGTYPE_USER, 'msg': u"You said: %s" % msg})
 
-        #Tool.LOGGER.debug("[ws-send] %s" % msg)
+        # Tool.LOGGER.debug("[ws-send] %s" % msg)
 
     def on_close(self):
         if self in message.DEFAULT_POOL:
@@ -77,7 +76,7 @@ class message(websocket.WebSocketHandler):
                                   (k, len(message.SBU_POOL[k])))
 
     @classmethod
-    def sendmsg(self, msg, type):
+    def sendmsg(cls, msg, msg_type):
         msgid = msg.get('task_name', '').split('@', 1)
         if len(msgid) == 2:
             task_name, msg_pool = msgid
@@ -91,7 +90,7 @@ class message(websocket.WebSocketHandler):
             msg['task_name'] = task_info[0]
             msg['task_id'] = '#'
 
-        msg['type'] = type
+        msg['type'] = msg_type
         msg['ctime'] = time.strftime('%Y-%m-%d %H:%M:%S', time.localtime())
 
         if msg['rc'] == 0:
@@ -108,9 +107,9 @@ class message(websocket.WebSocketHandler):
         
         target = []
         if msg_pool == '#DEAULT#':
-            target = self.DEFAULT_POOL
-        elif len(self.SBU_POOL.get(msg_pool, [])):
-            target = self.SBU_POOL[msg_pool]
+            target = cls.DEFAULT_POOL
+        elif len(cls.SBU_POOL.get(msg_pool, [])):
+            target = cls.SBU_POOL[msg_pool]
 
         for item in target:
             item.write_message(msg)
