@@ -4,7 +4,7 @@
 # A restful HTTP API for ansible by tornado
 # Base on ansible 2.x
 # Github <https://github.com/lfbear/ansible-api>
-# Author: lfbear
+# Author: lfbear, pgder
 
 from __future__ import (absolute_import, division, print_function)
 __metaclass__ = type
@@ -25,7 +25,7 @@ class Config(object):
     sign_key = 'YOUR_SIGNATURE_KEY_HERE'
     log_path = '/var/log/ansible-api.log'
     allow_ip = []
-    thread_pool_size = cpu_count() * 4
+    thread_pool_size = cpu_count() * 4     # adapt the number of thread pool size to the number of cpu cores
 
     dir_script = ''
     dir_playbook = ''
