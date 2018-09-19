@@ -35,8 +35,9 @@ __all__ = [
     'AsyncTest',
 ]
 
-
-executor = ThreadPoolExecutor(int(Config.Get('thread_pool_size')))
+# Create two ThreadPoolExecutor to handle high load requests and normal requests
+Load = ThreadPoolExecutor(int(Config.Get('thread_pool_size')))
+Average = ThreadPoolExecutor(int(Config.Get('thread_pool_size')))
 
 
 class ErrorCode(object):
@@ -63,7 +64,7 @@ class Main(Controller):
 class AsyncTest(Controller):
 
     async def get(self):
-        msg = await tornado.ioloop.IOLoop.current().run_in_executor(executor, self.test, 10)
+        msg = await tornado.ioloop.IOLoop.current().run_in_executor(Load, self.test, 10)
         self.write(Tool.jsonal(
             {'message': msg, 'rc': ErrorCode.ERRCODE_NONE}))
         self.finish()
@@ -105,6 +106,7 @@ class Command(Controller):
             else:
                 try:
                     host_list = target.split(",")
+                    executor = Load if data["load"] else Average     # Add extra parameters to select the thread pool
                     response = await tornado.ioloop.IOLoop.current().run_in_executor(
                         executor, Api.run_cmd, name, host_list, module, arg, sudo, forks)
                 except BaseException as e:
@@ -140,7 +142,7 @@ class Playbook(Controller):
                         yml_file, hosts, forks))
                     try:
                         response = await tornado.ioloop.IOLoop.current().run_in_executor(
-                            executor, Api.run_play_book, name, yml_file, hosts, forks)
+                            Average, Api.run_play_book, name, yml_file, hosts, forks)
                     except BaseException as e:
                         Tool.LOGGER.exception('A serious error occurs')
                         self.write(Tool.jsonal(
@@ -169,7 +171,7 @@ class FileList(Controller):
                 path_var = Config.Get('dir_' + path)
                 if os.path.exists(path_var):
                     Tool.LOGGER.info("read file list: " + path_var)
-                    dirs = await tornado.ioloop.IOLoop.current().run_in_executor(executor, os.listdir, path_var)
+                    dirs = await tornado.ioloop.IOLoop.current().run_in_executor(Average, os.listdir, path_var)
                     self.write({'list': dirs})
                 else:
                     self.write(Tool.jsonal(
@@ -195,7 +197,7 @@ class FileReadWrite(Controller):
             else:
                 file_path = Config.Get('dir_' + path) + file_name
                 if os.path.isfile(file_path):
-                    contents = await tornado.ioloop.IOLoop.current().run_in_executor(executor, self.read_file, file_path)
+                    contents = await tornado.ioloop.IOLoop.current().run_in_executor(Average, self.read_file, file_path)
                     self.write(Tool.jsonal({'content': contents}))
                 else:
                     self.write(Tool.jsonal(
@@ -234,7 +236,7 @@ class FileReadWrite(Controller):
                 {'error': "Sign is error", 'rc': ErrorCode.ERRCODE_BIZ}))
         else:
             file_path = Config.Get('dir_' + path) + filename
-            result = await tornado.ioloop.IOLoop.current().run_in_executor(executor, self.write_file, file_path, content)
+            result = await tornado.ioloop.IOLoop.current().run_in_executor(Average, self.write_file, file_path, content)
             self.write(Tool.jsonal({'ret': result}))
 
     def write_file(self, file_path, content):
@@ -290,7 +292,7 @@ class ParseVarsFromFile(Controller):
             file_path = Config.Get('dir_playbook') + file_name
             if os.path.isfile(file_path):
                 Tool.LOGGER.info("parse from file: " + file_path)
-                var = await tornado.ioloop.IOLoop.current().run_in_executor(executor, self.parse_vars, file_path)
+                var = await tornado.ioloop.IOLoop.current().run_in_executor(Average, self.parse_vars, file_path)
                 self.write({'vars': var})
             else:
                 self.write(Tool.jsonal(

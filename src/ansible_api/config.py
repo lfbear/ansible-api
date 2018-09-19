@@ -25,7 +25,7 @@ class Config(object):
     sign_key = 'YOUR_SIGNATURE_KEY_HERE'
     log_path = '/var/log/ansible-api.log'
     allow_ip = []
-    thread_pool_size = cpu_count() * 4     # adapt the number of thread pool size to the number of cpu cores
+    thread_pool_size = cpu_count() * 2     # adapt the number of thread pool size to the number of cpu cores
 
     dir_script = ''
     dir_playbook = ''
