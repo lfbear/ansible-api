@@ -103,7 +103,7 @@ class Api(object):
         return {'rc': rc, 'detail': detail}
 
     @staticmethod
-    def run_play_book(palyname, yml_file, sources, forks):
+    def run_play_book(palyname, yml_file, sources, forks, myvars):
         # initialize needed objects
         loader = DataLoaderV2(palyname)
         Options = namedtuple('Options', ['listtags', 'listtasks', 'listhosts',
@@ -124,6 +124,7 @@ class Api(object):
         # create inventory and pass to var manager
         inventory = InventoryManager(loader=loader, sources=sources)
         variable_manager = VariableManager(loader=loader, inventory=inventory)
+        variable_manager.extra_vars = myvars
 
         pbex = PlaybookExecutorV2(playbooks=[yml_file],
                                   inventory=inventory, variable_manager=variable_manager, loader=loader,

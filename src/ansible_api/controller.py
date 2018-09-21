@@ -136,6 +136,12 @@ class Playbook(Controller):
                 self.write(Tool.jsonal(
                     {'error': "Sign is error", 'rc': ErrorCode.ERRCODE_BIZ}))
             else:
+                myvars = {'hosts': hosts}
+                # injection vars in playbook (rule: vars start with "v_" in
+                # post data)
+                for (k, v) in data.items():
+                    if k[0:2] == "v_":
+                        myvars[k[2:]] = v
                 yml_file = Config.Get('dir_playbook') + yml_file
                 if os.path.isfile(yml_file):
                     Tool.LOGGER.info("playbook: {0}, host: {1}, forks: {2}".format(
@@ -143,7 +149,7 @@ class Playbook(Controller):
                     try:
                         executor = Load if data["load"] else Average  # Add extra parameters to select the thread pool
                         response = await tornado.ioloop.IOLoop.current().run_in_executor(
-                            executor, Api.run_play_book, name, yml_file, hosts, forks)
+                            executor, Api.run_play_book, name, yml_file, hosts, forks, myvars)
                     except BaseException as e:
                         Tool.LOGGER.exception('A serious error occurs')
                         self.write(Tool.jsonal(
