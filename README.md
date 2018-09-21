@@ -15,6 +15,7 @@ If you are trying to use it and not like CLI, you can try me now. I can provide 
 - 0.2.0 support websocket, remove code invaded in ansible
 
 ## How to install
+- python version >= 3.5 (use asyncio featrue)
 - prepared: pip install tornado
 - pip install git+https://github.com/lfbear/ansible-api.git
 
