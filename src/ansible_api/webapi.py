@@ -10,7 +10,10 @@ from __future__ import (absolute_import, division, print_function)
 __metaclass__ = type
 
 from tornado import ioloop, web, httpserver
-import threading
+from tornado.platform.asyncio import AnyThreadEventLoopPolicy
+
+import asyncio      # Event loop policy that allows loop creation on any thread. tornado >= 5.0
+asyncio.set_event_loop_policy(AnyThreadEventLoopPolicy())
 
 from ansible_api.config import Config
 from ansible_api import controller
