@@ -44,6 +44,7 @@ class ErrorCode(object):
     ERRCODE_NONE = 0
     ERRCODE_SYS = 1
     ERRCODE_BIZ = 2
+    ERRCODE_ASYNC = 3
 
 
 class Controller(RequestHandler):
@@ -104,17 +105,19 @@ class Command(Controller):
                 self.write(Tool.jsonal(
                     {'error': "This is danger shell: " + cmdinfo[0], 'rc': ErrorCode.ERRCODE_BIZ}))
             else:
-                try:
-                    host_list = target.split(",")
-                    executor = Load if data["load"] else Average     # Add extra parameters to select the thread pool
-                    response = await tornado.ioloop.IOLoop.current().run_in_executor(
-                        executor, Api.run_cmd, name, host_list, module, arg, sudo, forks)
-                except BaseException as e:
-                    Tool.LOGGER.exception('A serious error occurs')
-                    self.write(Tool.jsonal(
-                        {'error': str(e), 'rc': ErrorCode.ERRCODE_BIZ}))
+                host_list = target.split(",")
+                if data["load"]:
+                    self.finish({"rc": ErrorCode.ERRCODE_ASYNC, "detail": "任务已接收，异步执行中！"})  # async execute task release http connection
+                    await tornado.ioloop.IOLoop.current().run_in_executor(
+                        Load, Api.run_cmd, name, host_list, module, arg, sudo, forks)
                 else:
-                    self.write(response)
+                    try:
+                        response = await tornado.ioloop.IOLoop.current().run_in_executor(
+                            Average, Api.run_cmd, name, host_list, module, arg, sudo, forks)
+                        self.finish(response)   # sync task wait for response
+                    except Exception as e:
+                        self.finish(Tool.jsonal(
+                            {'error': str(e), 'rc': ErrorCode.ERRCODE_BIZ}))
 
 
 class Playbook(Controller):
