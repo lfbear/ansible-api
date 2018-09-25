@@ -1,9 +1,11 @@
 # ansible-api
+
 A restful http api for ansible 2.x
 - v0.2.2 fit for ansible version <=2.3.x
 - v0.2.6 fit for ansible version >=2.6.x (python>=3.5)
 
 ## What is it?
+
 [Ansible](https://github.com/ansible/ansible/) is a radically simple IT automation system.
 If you are trying to use it and not like CLI, you can try me now. I can provide you use ansible by A RESTful HTTP Api
 
@@ -15,9 +17,9 @@ If you are trying to use it and not like CLI, you can try me now. I can provide 
 - 0.2.0 support websocket, remove code invaded in ansible
 
 ## How to install
+
 - python version >= 3.5 (use asyncio featrue)
-- prepared: pip install tornado
-- pip install git+https://github.com/lfbear/ansible-api.git
+- pip3 install git+https://github.com/lfbear/ansible-api.git
 
 ## How to use it
 
