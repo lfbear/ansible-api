@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # coding: utf-8
 
-# A restful HTTP API for ansible by tornado
+# A restful HTTP API for ansible
 # Base on ansible 2.x
 # Github <https://github.com/lfbear/ansible-api>
 # Author: lfbear, pgder
@@ -100,10 +100,10 @@ class message(websocket.WebSocketHandler):
                 info = "%s\t%s\t%s\t%s\t%s" % (msg_pool, msg.get('task_name'), msg.get('task_id'), msg.get('msg').get('kind'), msg.get('msg').get('value'))
             else:
                 info = "%s\t%s" % (msg_pool, msg)
-            Tool.LOGGER.info("ANSIBLE_DETAIL\t%s" % info)
+            Tool.LOGGER.info("TASK DETAIL: %s" % info)
         else:
-            Tool.LOGGER.warning("ANSIBLE_DETAIL\t%s\t\033[0;33m%s\033[0m" % (msg_pool, msg))
-        Tool.LOGGER.debug("\033[0;30m[%s@websocket] %s\033[0m" % (msg_pool, msg))
+            Tool.LOGGER.warning("ERROR DETAIL: %s\t%s" % (msg_pool, msg))
+        Tool.LOGGER.debug("[%s@websocket] %s" % (msg_pool, msg))
         
         target = []
         if msg_pool == '#DEAULT#':
