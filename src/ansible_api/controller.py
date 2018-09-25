@@ -50,6 +50,7 @@ class ErrorCode(object):
 class Controller(RequestHandler):
 
     def __init__(self, application, request, **kwargs):
+        Tool.LOGGER.info("wenqi_DETAIL\t request %s" % request)
         super(Controller, self).__init__(application, request, **kwargs)
         if len(Config.Get('allow_ip')) and self.request.remote_ip not in Config.Get('allow_ip'):
             raise HTTPError(403, 'Your ip(%s) is forbidden' % self.request.remote_ip)
@@ -124,6 +125,7 @@ class Playbook(Controller):
 
     async def post(self):
         data = Tool.parsejson(self.request.body)
+        Tool.LOGGER.info("wenqi_DETAIL\t data %s" % data)
         name = data['n'].encode('utf-8').decode()
         hosts = data['h']
         sign = data['s']
@@ -134,6 +136,7 @@ class Playbook(Controller):
                 {'error': "Lack of necessary parameters", 'rc': ErrorCode.ERRCODE_SYS}))
         else:
             hotkey = name + hosts + yml_file + Config.Get('sign_key')
+            Tool.LOGGER.info("wenqi_DETAIL\t hot key %s" % hotkey)
             check_str = Tool.getmd5(hotkey)
             if sign != check_str:
                 self.write(Tool.jsonal(
@@ -146,6 +149,8 @@ class Playbook(Controller):
                     if k[0:2] == "v_":
                         myvars[k[2:]] = v
                 yml_file = Config.Get('dir_playbook') + yml_file
+
+                Tool.LOGGER.info("wenqi_DETAIL\t yml file %s" % yml_file)
                 if os.path.isfile(yml_file):
                     Tool.LOGGER.info("playbook: {0}, host: {1}, forks: {2}".format(
                         yml_file, hosts, forks))
