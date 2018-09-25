@@ -15,23 +15,36 @@ import sys
 sys.path.insert(0, os.path.abspath('src'))
 from ansible_api import __version__
 
+ABSIBLE_REQUIRE = '2.6.4'
+TORNADO_REQUIRE = '5.1.1'
+PYTHON_REQUIRE = '3.5'
 
 # do something after install
 class CustomInstall(install):
 
     _configfiles = [('/etc/ansible/', ['data/api.cfg'])]
-    _pluginfiles = [('plugins/connection', ['data/multipoller.py'])]
+    #_pluginfiles = [('plugins/connection', ['data/multipoller.py'])]
 
     def run(self):
+        cur_python_ver = "%d.%d" % (sys.version_info[0], sys.version_info[1])
+        if LooseVersion(cur_python_ver) <  LooseVersion(PYTHON_REQUIRE):
+            print("Error: Python version " + cur_python_ver + " < " + PYTHON_REQUIRE)
+            return False
+        os.system("%s -m pip install ansible==%s" % (sys.executable, ABSIBLE_REQUIRE))
+        os.system("%s -m pip install tornado==%s" % (sys.executable, TORNADO_REQUIRE))
+        try:
+            import ansible
+        except ImportError:
+            print("Error: I can NOT work without ansible")
         path = os.path.dirname(ansible.__file__)
-        if LooseVersion(ansible.__version__) > LooseVersion('2.0.0'):
+        if LooseVersion(ansible.__version__) >= LooseVersion(ABSIBLE_REQUIRE):
             install.run(self)
-            self.init_plugin_file(path)
+            #self.init_plugin_file(path)
             self.init_config_file()
             print("\033[1;37mAnsible-api v%s install complete.\033[0m" %
                   __version__)
         else:
-            print("Error: ansible version " + ansible.__version__ + " < 2.0.0")
+            print("Error: ansible version " + ansible.__version__ + " < " + ABSIBLE_REQUIRE)
 
     def init_config_file(self):
         for p in self._configfiles:
@@ -56,23 +69,19 @@ class CustomInstall(install):
                 os.system(' '.join(['cp', f, file]))
                 print("Plugin file: %s copy successfully" % file)
 
-try:
-    import ansible
-    setup(
+setup(
         name='ansible-api',
         version=__version__,
         scripts=['bin/ansible-api'],
         package_dir={'': 'src'},
         packages=find_packages('src'),
-        install_requires=['tornado==5.1', 'ansible==2.6.4', 'futures'],
+        python_requires='>='+PYTHON_REQUIRE,
+        install_requires=['tornado=='+TORNADO_REQUIRE,'ansible=='+ABSIBLE_REQUIRE],
         cmdclass={'install': CustomInstall},
 
         author="lfbear",
         author_email="lfbear@gmail.com",
-        description="A RESTful HTTP Api for Ansible 2.x",
+        description="A restful HTTP API for ansible 2.x by tornado",
         license="GPLv3",
         url="https://github.com/lfbear/ansible-api"
     )
-
-except ImportError:
-    print("Error: I can NOT work without ansible")
