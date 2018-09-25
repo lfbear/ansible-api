@@ -114,7 +114,7 @@ class Command(Controller):
                     try:
                         response = await tornado.ioloop.IOLoop.current().run_in_executor(
                             Average, Api.run_cmd, name, host_list, module, arg, sudo, forks)
-                        self.finish(response)
+                        self.finish(response)   # sync task wait for response
                     except Exception as e:
                         self.finish(Tool.jsonal(
                             {'error': str(e), 'rc': ErrorCode.ERRCODE_BIZ}))
