@@ -104,20 +104,22 @@ class Api(object):
 
     @staticmethod
     def run_play_book(palyname, yml_file, sources, forks, myvars):
+        if ',' not in sources: # let it NOT be a filepath
+            sources = sources + ','
         # initialize needed objects
         loader = DataLoaderV2(palyname)
         Options = namedtuple('Options', ['listtags', 'listtasks', 'listhosts',
                                          'syntax', 'connection', 'module_path', 'forks', 'remote_user',
                                          'private_key_file', 'ssh_common_args', 'ssh_extra_args',
                                          'sftp_extra_args', 'scp_extra_args', 'become', 'become_method',
-                                         'become_user', 'verbosity', 'check'])
+                                         'become_user', 'verbosity', 'check', 'diff'])
         pb_options = Options(listtags=False, listtasks=False,
                              listhosts=False, syntax=False, connection='ssh',
                              module_path=None, forks=forks, remote_user='ansible',
                              private_key_file=None, ssh_common_args=None,
                              ssh_extra_args=None, sftp_extra_args=None, scp_extra_args=None,
                              become=True, become_method='sudo', become_user='root',
-                             verbosity=None, check=False)
+                             verbosity=None, check=False, diff=False)
 
         passwords = {}
 
