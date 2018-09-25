@@ -111,9 +111,13 @@ class Command(Controller):
                     await tornado.ioloop.IOLoop.current().run_in_executor(
                         Load, Api.run_cmd, name, host_list, module, arg, sudo, forks)
                 else:
-                    response = await tornado.ioloop.IOLoop.current().run_in_executor(
-                        Average, Api.run_cmd, name, host_list, module, arg, sudo, forks)
-                    self.write(response)  # sync execute task waite http response
+                    try:
+                        response = await tornado.ioloop.IOLoop.current().run_in_executor(
+                            Average, Api.run_cmd, name, host_list, module, arg, sudo, forks)
+                        self.finish(response)
+                    except Exception as e:
+                        self.finish(Tool.jsonal(
+                            {'error': str(e), 'rc': ErrorCode.ERRCODE_BIZ}))
 
 
 class Playbook(Controller):
