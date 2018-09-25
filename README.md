@@ -18,7 +18,7 @@ If you are trying to use it and not like CLI, you can try me now. I can provide 
 
 ## How to install
 
-- python version >= 3.5 (use asyncio featrue)
+- [preparatory work] python version >= 3.5 (use asyncio featrue)
 - pip3 install git+https://github.com/lfbear/ansible-api.git
 
 ## How to use it
@@ -33,6 +33,3 @@ eg: ansible-api -c /etc/ansible/api.cfg -d > /dev/null &
 ## How to prepare your data
 
 [HTTP API Usage](https://github.com/lfbear/ansible-api/wiki/http-api-usage)
-
-## If you have hundreds of machines, suggest
-[filedescriptor out of range in select()](https://github.com/lfbear/ansible-api/wiki/ValueError:-filedescriptor-out-of-range-in-select())
