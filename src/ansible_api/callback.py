@@ -84,7 +84,7 @@ class CallbackModule(CallbackBase):
                     )
                     wsmsg['rc'] += c
                 message.sendmsg(wsmsg, message.MSGTYPE_NOTICE)
-            elif isinstance(crucial, unicode) or isinstance(crucial, str):  #
+            elif isinstance(crucial, str):  #
                 wsmsg = dict(
                     rc=self.RC_SUCC,
                     task_name=self.current_taskname,
