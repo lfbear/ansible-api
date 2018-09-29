@@ -15,6 +15,8 @@ from tornado.platform.asyncio import AnyThreadEventLoopPolicy
 import asyncio      # Event loop policy that allows loop creation on any thread. tornado >= 5.0
 asyncio.set_event_loop_policy(AnyThreadEventLoopPolicy())
 
+import json
+from ansible_api.tool import Tool
 from ansible_api.config import Config
 from ansible_api import controller
 from ansible_api import websocket
@@ -37,6 +39,9 @@ class WebApi(object):
 
         http_server = httpserver.HTTPServer(application)
         http_server.listen(Config.Get('port'), Config.Get('host'))
+        config = Config().__dict__
+        config['sign_key'] = len(config['sign_key']) * '*' #mask signature key
+        Tool.LOGGER.debug("Config at start: %s" % json.dumps(config))
 
     def start(self):
         ioloop.IOLoop.instance().start()
