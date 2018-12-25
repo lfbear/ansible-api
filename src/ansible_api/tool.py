@@ -25,18 +25,18 @@ class Tool(object):
     def init_logger(path):
         log_formatter = "%(asctime)s | %(levelname)s - %(message)s"
         date_formatter = "%Y-%m-%d %H:%M:%S"
-        log_formatter = logging.Formatter(fmt=log_formatter, datefmt=date_formatter)
-        err_handler = logging.handlers.TimedRotatingFileHandler('/var/log/ansible-api.err', when='midnight')
-        err_handler.setFormatter(log_formatter)
-        err_handler.setLevel(logging.WARNING)
-        if isinstance(path, str) and os.path.exists(os.path.dirname(path)):
+        logFormatter = logging.Formatter(fmt=log_formatter, datefmt=date_formatter)
+        errHandler = logging.handlers.TimedRotatingFileHandler('/var/log/ansible-api.err',when='midnight')
+        errHandler.setFormatter(logFormatter)
+        errHandler.setLevel(logging.WARNING)
+        if isinstance(path,str) and os.path.exists(os.path.dirname(path)):
             Tool.LOGGER = logging.getLogger('ansible-api.%s' % __version__)
-            log_handler = logging.handlers.TimedRotatingFileHandler(path, when='midnight')
-            log_handler.setFormatter(log_formatter)
-            Tool.LOGGER.addHandler(log_handler)
-            Tool.LOGGER.addHandler(err_handler)
+            logHandler = logging.handlers.TimedRotatingFileHandler(path,when='midnight')
+            logHandler.setFormatter(logFormatter)
+            Tool.LOGGER.addHandler(logHandler)
+            Tool.LOGGER.addHandler(errHandler)
             Tool.LOGGER.setLevel(logging.DEBUG)
-            Tool.LOGGER.propagate = False  # disable console output
+            Tool.LOGGER.propagate = False # disable console output
         else:
             logging.basicConfig(level=logging.DEBUG,
                                 format=log_formatter, datefmt=date_formatter)
