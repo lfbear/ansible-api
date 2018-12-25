@@ -14,13 +14,21 @@ from .report import Reporter
 
 
 class CallBack(object):
+    """
+    Callback functions for ansible-runner
+    """
 
     def __init__(self):
         self._result = []
         self._drawer = []
+        self._pepper = {}
+
+    def event_pepper(self, event, data):
+        self._pepper[event] = data
 
     def event_handler(self, data):
         rpt = Reporter(data)
+        rpt.adorn(self._pepper)
         fmt = rpt.tidy()
         detail = rpt.detail()
         if fmt:
@@ -46,13 +54,15 @@ class CallBack(object):
         self._drawer.append(data)
 
     def status_handler(self, data):
+        status = data.get('status', '') if isinstance(data, dict) else data
         for item in self._drawer:
-            if item.get('status', None) == data:
-                before = item.get('before', lambda: {})
+            if item.get('status', None) == status:
+                before = item.get('raw', lambda: {})
                 after = item.get('after', lambda: {})
                 # print('====>', before(), after())
                 rpt = Reporter(before())
-                fmt = rpt.simulate(after())
+                rpt.adorn(after())
+                fmt = rpt.tidy()
                 detail = rpt.detail()
                 if fmt:
                     Message.send(fmt)

@@ -103,10 +103,10 @@ class Command(Controller):
             else:
                 try:
                     cb = CallBack()
-                    cb.status_drawer(dict(status='starting', before=lambda: dict(
+                    cb.status_drawer(dict(status='starting', raw=lambda: dict(
                         task_name=module, event='playbook_on_play_start', runner_ident=name,
-                        event_data=dict(pattern=target, name=module)
-                    ), after=lambda: dict(task_list=[module])))
+                        event_data=dict(pattern=target, name=module)),
+                        after=lambda: dict(task_list=[module])))
                     response = ansible_runner.interface.run(
                         host_pattern=target, inventory='/etc/ansible/hosts',
                         envvars=dict(PATH=sys.path[0]),
@@ -155,10 +155,16 @@ class Playbook(Controller):
 
                 Tool.LOGGER.debug("MORE DETAIL: yml file %s" % yml_file)
                 if os.path.isfile(yml_file):
+                    task_list = []
+                    with open(yml_file, 'r') as contents:
+                        yaml_cnt = yaml.load(contents)
+                        if len(yaml_cnt) > 0 and len(yaml_cnt[0].get('tasks', [])) > 0:
+                            task_list = [x.get('name', 'unnamed') for x in yaml_cnt[0]['tasks']]
                     Tool.LOGGER.info("playbook: {0}, host: {1}, forks: {2}".format(
                         yml_file, hosts, forks))
                     try:
                         cb = CallBack()
+                        cb.event_pepper('playbook_on_play_start', dict(task_list=task_list))
                         response = ansible_runner.interface.run(
                             host_pattern=hosts, inventory='/etc/ansible/hosts',
                             envvars=dict(PATH=sys.path[0]),
