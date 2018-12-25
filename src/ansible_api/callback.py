@@ -57,11 +57,11 @@ class CallBack(object):
         status = data.get('status', '') if isinstance(data, dict) else data
         for item in self._drawer:
             if item.get('status', None) == status:
-                before = item.get('raw', lambda: {})
-                after = item.get('after', lambda: {})
-                # print('====>', before(), after())
-                rpt = Reporter(before())
-                rpt.adorn(after())
+                raw = item.get('raw', lambda: {})()
+                after = item.get('after', lambda: {})()
+                # print('====>', raw, after)
+                rpt = Reporter(raw)
+                rpt.adorn({raw.get('event'): after})
                 fmt = rpt.tidy()
                 detail = rpt.detail()
                 if fmt:

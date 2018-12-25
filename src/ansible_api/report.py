@@ -78,18 +78,6 @@ class Reporter(object):
     def adorn(self, data):
         self._after.update(data)
 
-    def simulate(self, data):
-        if isinstance(self._raw, dict):
-            raw = self.tidy()
-            if isinstance(data, dict):
-                merge = raw.copy()
-                merge.update(data)
-                return merge
-            else:
-                return raw
-        else:
-            return {}
-
     def detail(self):
         if self._detail is not None:
             # print('---->', self._detail)
