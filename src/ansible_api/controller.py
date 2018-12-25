@@ -109,7 +109,7 @@ class Command(Controller):
                         after=lambda: dict(task_list=[module])))
                     response = ansible_runner.interface.run(
                         host_pattern=target, inventory='/etc/ansible/hosts',
-                        envvars=dict(PATH=sys.path[0]),
+                        envvars=dict(PATH=os.environ.get('PATH')+':'+sys.path[0]),
                         ident=name, module=module, module_args=arg,
                         event_handler=cb.event_handler, status_handler=cb.status_handler
                     )
@@ -167,7 +167,7 @@ class Playbook(Controller):
                         cb.event_pepper('playbook_on_play_start', dict(task_list=task_list))
                         response = ansible_runner.interface.run(
                             host_pattern=hosts, inventory='/etc/ansible/hosts',
-                            envvars=dict(PATH=sys.path[0]),
+                            envvars=dict(PATH=os.environ.get('PATH')+':'+sys.path[0]),
                             playbook=yml_file, ident=name, extravars=my_vars,
                             event_handler=cb.event_handler, status_handler=cb.status_handler
                         )

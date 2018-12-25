@@ -82,7 +82,7 @@ class Reporter(object):
         if self._detail is not None:
             # print('---->', self._detail)
             detail = self._detail.copy()
-            options = ['cmd', 'changed', 'failures', 'ok', 'skipped']
+            options = ['cmd', 'changed', 'failures', 'ok', 'skipped', 'unreachable']
             for o in options:
                 if o in detail['res']:
                     detail[o] = detail['res'][o]
