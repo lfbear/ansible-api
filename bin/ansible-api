@@ -41,7 +41,7 @@ if __name__ == "__main__":
 
     print('\033[1;32mAnsible API is running at', end=' ')
     if daemon_mode:
-        log_path = Config.Get('log_path')
+        log_path = Config.get('log_path')
         print('Daemon Mode')
     else:
         log_path = None
