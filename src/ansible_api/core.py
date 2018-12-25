@@ -2,7 +2,7 @@
 # coding: utf-8
 
 # A restful HTTP API for ansible by tornado
-# Base on ansible 2.x
+# Base on ansible and ansible-runner
 # Github <https://github.com/lfbear/ansible-api>
 # Author: lfbear, pgder
 
@@ -19,7 +19,6 @@ from ansible.parsing.splitter import parse_kv
 from ansible.executor.task_queue_manager import TaskQueueManager
 from ansible.executor.playbook_executor import PlaybookExecutor
 from ansible.parsing.yaml.objects import AnsibleSequence
-from ansible_api.callback import CallbackModule
 
 
 # new DataLoader for renaming playbook's name

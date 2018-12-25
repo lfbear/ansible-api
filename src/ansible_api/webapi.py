@@ -2,7 +2,7 @@
 # coding: utf-8
 
 # A restful HTTP API for ansible by tornado
-# Base on ansible 2.x
+# Base on ansible and ansible-runner
 # Github <https://github.com/lfbear/ansible-api>
 # Author: lfbear
 
@@ -16,10 +16,10 @@ import asyncio      # Event loop policy that allows loop creation on any thread.
 asyncio.set_event_loop_policy(AnyThreadEventLoopPolicy())
 
 import json
-from ansible_api.tool import Tool
-from ansible_api.config import Config
-from ansible_api import controller
-from ansible_api import websocket
+from .tool import Tool
+from .config import Config
+from . import controller
+from . import websocket
 
 
 class WebApi(object):
@@ -34,13 +34,13 @@ class WebApi(object):
             (r'/filelist', controller.FileList),
             (r'/fileitem', controller.FileReadWrite),
             (r'/filexist', controller.FileExist),
-            (r'/message', websocket.message),
+            (r'/message', websocket.Message),
         ])
 
         http_server = httpserver.HTTPServer(application)
-        http_server.listen(Config.Get('port'), Config.Get('host'))
+        http_server.listen(Config.get('port'), Config.get('host'))
         config = Config().__dict__
-        config['sign_key'] = len(config['sign_key']) * '*' #mask signature key
+        config['sign_key'] = len(config['sign_key']) * '*'  # mask signature key
         Tool.LOGGER.debug("Config at start: %s" % json.dumps(config))
 
     def start(self):

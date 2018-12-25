@@ -2,7 +2,7 @@
 # coding: utf-8
 
 # A restful HTTP API for ansible by tornado
-# Base on ansible 2.x
+# Base on ansible and ansible-runner
 # Github <https://github.com/lfbear/ansible-api>
 # Author: lfbear, pgder
 
@@ -62,6 +62,6 @@ class Config(object):
                 self.dir_playbook = cf.get('directory', 'playbook')
 
     @staticmethod
-    def Get(attr):
+    def get(attr):
         cfg = Config()
         return getattr(cfg, attr, '')
