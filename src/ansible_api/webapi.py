@@ -27,7 +27,7 @@ class WebApi(object):
     def __init__(self):
         application = web.Application([
             (r'/', controller.Main),
-            (r'/asynctest', controller.AsyncTest),
+            (r'/test', controller.NonBlockTest),
             (r'/command', controller.Command),
             (r'/playbook', controller.Playbook),
             (r'/parsevars', controller.ParseVarsFromFile),

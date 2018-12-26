@@ -17,7 +17,12 @@ import yaml
 import ansible_runner
 
 from jinja2 import Environment, meta
+
 from tornado.web import RequestHandler, HTTPError
+from tornado.concurrent import run_on_executor
+from concurrent.futures import ThreadPoolExecutor
+
+import tornado.gen
 
 from .tool import Tool
 from .config import Config
@@ -60,24 +65,31 @@ class Main(Controller):
             {'message': "Hello, I am Ansible Api", 'rc': ErrorCode.ERRCODE_NONE}))
 
 
-class AsyncTest(Controller):
+class NonBlockTest(Controller):
+    executor = ThreadPoolExecutor(4)
 
+    @tornado.gen.coroutine
     def get(self):
-        self.finish(Tool.jsonal(
-            {'message': 'hi test', 'rc': ErrorCode.ERRCODE_NONE}))
+        start = time.time()
+        msg = yield self.run_block()
+        end = time.time() - start
+        self.write(Tool.jsonal({'message': msg + 'and total cost time: %s' % end, 'rc': ErrorCode.ERRCODE_NONE}))
 
-    async def test(self):
+    @run_on_executor
+    def run_block(self):
         time.sleep(10)
         return 'i have slept 10 s'
 
 
 class Command(Controller):
+    executor = ThreadPoolExecutor(Config.get('thread_pool_size'))
 
     def get(self):
         self.finish(Tool.jsonal(
             {'error': "Forbidden in get method", 'rc': ErrorCode.ERRCODE_SYS}))
 
-    async def post(self):  # Change the async method to python3 async, this performance better than gen.coroutine
+    @tornado.gen.coroutine
+    def post(self):  # Change the async method to python3 async, this performance better than gen.coroutine
         data = Tool.parsejson(self.request.body)
         bad_cmd = ['reboot', 'su', 'sudo', 'dd',
                    'mkfs', 'shutdown', 'half', 'top']
@@ -106,27 +118,33 @@ class Command(Controller):
                     cb.status_drawer(dict(status='starting', raw=lambda: dict(
                         task_name=module, event='playbook_on_play_start', runner_ident=name,
                         event_data=dict(pattern=target, name=module)),
-                        after=lambda: dict(task_list=[module])))
-                    response = ansible_runner.interface.run(
-                        host_pattern=target, inventory='/etc/ansible/hosts',
-                        envvars=dict(PATH=os.environ.get('PATH')+':'+sys.path[0]),
-                        ident=name, module=module, module_args=arg,
-                        event_handler=cb.event_handler, status_handler=cb.status_handler
-                    )
-                    # pp = pprint.PrettyPrinter(indent=4)
-                    # print('*' * 20)
-                    # pp.pprint(cb.get_summary())
-                    # print('+' * 20)
-                    self.finish(Tool.jsonal(dict(rc=response.rc, detail=cb.get_summary())))
+                                          after=lambda: dict(task_list=[module])))
+                    response = yield self.run(target, name, module, arg, cb)
+                    self.write(Tool.jsonal(dict(rc=response.rc, detail=cb.get_summary())))
                 except Exception as e:
                     Tool.LOGGER.exception(e)
-                    self.finish(Tool.jsonal(
+                    self.write(Tool.jsonal(
                         {'error': str(e), 'rc': ErrorCode.ERRCODE_BIZ}))
+
+    @run_on_executor
+    def run(self, target, name, module, arg, cb):
+        return ansible_runner.interface.run(
+            host_pattern=target, inventory='/etc/ansible/hosts',
+            envvars=dict(PATH=os.environ.get('PATH') + ':' + sys.path[0]),
+            ident=name, module=module, module_args=arg,
+            event_handler=cb.event_handler, status_handler=cb.status_handler
+        )
 
 
 class Playbook(Controller):
+    executor = ThreadPoolExecutor(Config.get('thread_pool_size'))
 
-    async def post(self):
+    def get(self):
+        self.finish(Tool.jsonal(
+            {'error': "Forbidden in get method", 'rc': ErrorCode.ERRCODE_SYS}))
+
+    @tornado.gen.coroutine
+    def post(self):
         data = Tool.parsejson(self.request.body)
         Tool.LOGGER.debug("MORE DETAIL: data %s" % data)
         name = data['n'].encode('utf-8').decode()
@@ -165,16 +183,7 @@ class Playbook(Controller):
                     try:
                         cb = CallBack()
                         cb.event_pepper('playbook_on_play_start', dict(task_list=task_list))
-                        response = ansible_runner.interface.run(
-                            host_pattern=hosts, inventory='/etc/ansible/hosts',
-                            envvars=dict(PATH=os.environ.get('PATH')+':'+sys.path[0]),
-                            playbook=yml_file, ident=name, extravars=my_vars,
-                            event_handler=cb.event_handler, status_handler=cb.status_handler
-                        )
-                        # pp = pprint.PrettyPrinter(indent=4)
-                        # print('*' * 20)
-                        # pp.pprint(cb.get_summary())
-                        # print('+' * 20)
+                        response = yield self.run(hosts, name, yml_file, my_vars, cb)
                         self.finish(Tool.jsonal(dict(rc=response.rc, detail=cb.get_summary())))
                     except BaseException as e:
                         Tool.LOGGER.exception(e)
@@ -184,6 +193,15 @@ class Playbook(Controller):
                 else:
                     self.finish(Tool.jsonal(
                         {'error': "yml file(" + yml_file + ") is not existed", 'rc': ErrorCode.ERRCODE_SYS}))
+
+    @run_on_executor
+    def run(self, hosts, name, yml_file, my_vars, cb):
+        return ansible_runner.interface.run(
+            host_pattern=hosts, inventory='/etc/ansible/hosts',
+            envvars=dict(PATH=os.environ.get('PATH') + ':' + sys.path[0]),
+            playbook=yml_file, ident=name, extravars=my_vars,
+            event_handler=cb.event_handler, status_handler=cb.status_handler
+        )
 
 
 class FileList(Controller):
