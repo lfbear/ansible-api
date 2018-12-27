@@ -53,6 +53,6 @@ if __name__ == "__main__":
         ' '.join(['Ansible API', 'Start...', '(', 'PID =', str(os.getpid()), ')']))
 
     try:
-        Server()
+        Server(daemon_mode)
     except Exception as e:
         Tool.LOGGER.exception(e)

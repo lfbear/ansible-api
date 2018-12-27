@@ -36,7 +36,7 @@ class Config(object):
             pass
         else:
             self.host = cf.get('default', 'host') if cf.has_option('default', 'host') else Config.host
-            self.port = cf.get('default', 'port') if cf.has_option('default', 'port') else Config.port
+            self.port = int(cf.get('default', 'port')) if cf.has_option('default', 'port') else Config.port
             self.sign_key = cf.get('default', 'sign_key') if cf.has_option('default', 'sign_key') else Config.sign_key
             self.log_path = cf.get('default', 'log_path') if cf.has_option('default', 'log_path') else Config.log_path
             self.allow_ip = cf.get('default', 'allow_ip').split() if cf.has_option('default',
