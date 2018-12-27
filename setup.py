@@ -11,12 +11,16 @@ from setuptools import setup, find_packages
 from distutils.version import LooseVersion
 import os
 import sys
+import pkg_resources
+
+
 
 sys.path.insert(0, os.path.abspath('src'))
 from ansible_api import __version__
 
+ABSIBLE_REQUIRE = '2.6.0'
 ABSIBLER_REQUIRE = '1.2.0'
-SANIC_REQUIRE = '0.8.3'
+SANIC_REQUIRE = '0.8.0'
 PYTHON_REQUIRE = '3.7'
 
 
@@ -31,21 +35,25 @@ class CustomInstall(install):
         if LooseVersion(cur_python_ver) < LooseVersion(PYTHON_REQUIRE):
             print("Error: Python version " + cur_python_ver + " < " + PYTHON_REQUIRE)
             return False
-        os.system("%s -m pip install ansible-runner==%s" % (sys.executable, ABSIBLER_REQUIRE))
-        os.system("%s -m pip install sanic==%s" % (sys.executable, SANIC_REQUIRE))
+        os.system("%s -m pip install ansible>=%s" % (sys.executable, ABSIBLE_REQUIRE))
+        os.system("%s -m pip install ansible-runner>=%s" % (sys.executable, ABSIBLER_REQUIRE))
+        os.system("%s -m pip install sanic>=%s" % (sys.executable, SANIC_REQUIRE))
         try:
+            import ansible
             import ansible_runner
         except ImportError:
             print("Error: I can NOT work without ansible-runner")
         # path = os.path.dirname(ansible.__file__)
-        if LooseVersion(ansible_runner.__version__) >= LooseVersion(ABSIBLER_REQUIRE):
+        if LooseVersion(ansible.__version__) >= LooseVersion(ABSIBLE_REQUIRE) and \
+                LooseVersion(pkg_resources.require("ansible_runner")[0].version) >= LooseVersion(ABSIBLER_REQUIRE):
             install.run(self)
             # self.init_plugin_file(path)
             self.init_config_file()
             print("\033[1;37mAnsible-api v%s install complete.\033[0m" %
                   __version__)
         else:
-            print("Error: ansible version " + ansible_runner.__version__ + " < " + ABSIBLER_REQUIRE)
+            print("Error: ansible [%s] or ansible-runner [%s] version too low" %
+                  (ansible_runner.__version__,pkg_resources.require("ansible_runner")[0].version))
 
     def init_config_file(self):
         for p in self._configfiles:
@@ -78,7 +86,9 @@ setup(
     package_dir={'': 'src'},
     packages=find_packages('src'),
     python_requires='>=' + PYTHON_REQUIRE,
-    install_requires=['sanic==' + SANIC_REQUIRE, 'ansible-runner==' + ABSIBLER_REQUIRE],
+    install_requires=['sanic>=' + SANIC_REQUIRE,
+                      'ansible>=' + ABSIBLE_REQUIRE,
+                      'ansible-runner>=' + ABSIBLER_REQUIRE],
     cmdclass={'install': CustomInstall},
 
     author="lfbear",
