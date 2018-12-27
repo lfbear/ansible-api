@@ -29,14 +29,14 @@ class Server(object):
         app.add_route(controller.FileReadWrite.as_view(), '/fileitem')
         app.add_route(controller.FileExist.as_view(), '/filexist')
         app.add_route(controller.ParseVarsFromFile.as_view(), '/parsevars')
-        app.add_websocket_route(controller.Message.websocket, '/message', subprotocols=['', 'remote'])
+        app.add_websocket_route(controller.Message.websocket, '/message', subprotocols=Config.get('ws_sub'))
 
         @app.middleware('request')
         async def ip_ban(request):
             if len(Config.get('allow_ip')) and request.ip not in Config.get('allow_ip'):
                 return text('Your IP (%s) is not allowed!' % request.ip, status=403)
 
-        app.run(host=Config.get('host'), port=Config.get('port'), debug=True, workers=1)
+        app.run(host=Config.get('host'), port=Config.get('port'), workers=Config.get('workers'))
 
         # print config contents
         config = Config().__dict__

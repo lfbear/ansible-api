@@ -22,7 +22,8 @@ class Config(object):
     sign_key = 'YOUR_SIGNATURE_KEY_HERE'
     log_path = '/var/log/ansible-api.log'
     allow_ip = []
-    thread_pool_size = cpu_count() // 2     # adapt the number of thread pool size to the number of cpu cores
+    ws_sub = []
+    workers = 4  # default value
 
     dir_script = ''
     dir_playbook = ''
@@ -45,8 +46,10 @@ class Config(object):
                 self.log_path = cf.get('default', 'log_path')
             if cf.has_option('default', 'allow_ip'):
                 self.allow_ip = cf.get('default', 'allow_ip').split()
-            if cf.has_option('default', 'thread_pool_size'):
-                self.thread_pool_size = cf.get('default', 'thread_pool_size')
+            if cf.has_option('default', 'workers'):
+                self.workers = cf.get('default', 'workers')
+            if cf.has_option('default', 'ws_sub'):
+                self.ws_sub = cf.get('default', 'ws_sub').split()
 
         try:
             cf.options('directory')
