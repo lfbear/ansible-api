@@ -36,7 +36,7 @@ class CustomInstall(install):
         try:
             import ansible_runner
         except ImportError:
-            print("Error: I can NOT work without ansible")
+            print("Error: I can NOT work without ansible-runner")
         # path = os.path.dirname(ansible.__file__)
         if LooseVersion(ansible_runner.__version__) >= LooseVersion(ABSIBLER_REQUIRE):
             install.run(self)
@@ -78,7 +78,7 @@ setup(
     package_dir={'': 'src'},
     packages=find_packages('src'),
     python_requires='>=' + PYTHON_REQUIRE,
-    install_requires=['sanic==' + SANIC_REQUIRE, 'ansible==' + ABSIBLER_REQUIRE],
+    install_requires=['sanic==' + SANIC_REQUIRE, 'ansible-runner==' + ABSIBLER_REQUIRE],
     cmdclass={'install': CustomInstall},
 
     author="lfbear",
