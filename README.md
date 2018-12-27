@@ -1,4 +1,4 @@
-# ansible-api
+# ansible-api [v0.5.0]
 
 A restful http api for ansible
 python version >= 3.7
