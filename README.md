@@ -1,8 +1,7 @@
 # ansible-api
 
-A restful http api for ansible 2.x
-- v0.2.2 fit for ansible version <=2.3.x
-- v0.2.6 fit for ansible version >=2.6.x (python>=3.5)
+A restful http api for ansible
+python version >= 3.7
 
 ## What is it?
 
@@ -11,6 +10,8 @@ If you are trying to use it and not like CLI, you can try me now. I can provide 
 
 ## Changelog
 
+- 0.5.0 replace tornado with sanic, more lightly (python>=3.7) 
+- 0.3.0 using ansible-runner as middleware
 - 0.2.6 adaptive ansible 2.6.4 and add asynchronization mode
 - 0.2.2 optimize log
 - 0.2.1 optimize log and allow mutil-instance in the same host
@@ -18,7 +19,7 @@ If you are trying to use it and not like CLI, you can try me now. I can provide 
 
 ## How to install
 
-- [preparatory work] python version >= 3.5 (use asyncio featrue)
+- [preparatory work] python version >= 3.7 (use asyncio featrue)
 - pip3 install git+https://github.com/lfbear/ansible-api.git
 
 ## How to use it

@@ -1,8 +1,8 @@
 #!/usr/bin/env python
 # coding: utf-8
 
-# A restful HTTP API for ansible by tornado
-# Base on ansible 2.x (>2.6)
+# A restful HTTP API for ansible
+# Base on ansible-runner and sanic
 # Github <https://github.com/lfbear/ansible-api>
 # Author: lfbear
 
@@ -15,36 +15,37 @@ import sys
 sys.path.insert(0, os.path.abspath('src'))
 from ansible_api import __version__
 
-ABSIBLE_REQUIRE = '2.6.4'
-TORNADO_REQUIRE = '5.1.1'
-PYTHON_REQUIRE = '3.5'
+ABSIBLER_REQUIRE = '1.2.0'
+SANIC_REQUIRE = '0.8.3'
+PYTHON_REQUIRE = '3.7'
+
 
 # do something after install
 class CustomInstall(install):
-
     _configfiles = [('/etc/ansible/', ['data/api.cfg'])]
-    #_pluginfiles = [('plugins/connection', ['data/multipoller.py'])]
+
+    # _pluginfiles = [('plugins/connection', ['data/multipoller.py'])]
 
     def run(self):
         cur_python_ver = "%d.%d" % (sys.version_info[0], sys.version_info[1])
-        if LooseVersion(cur_python_ver) <  LooseVersion(PYTHON_REQUIRE):
+        if LooseVersion(cur_python_ver) < LooseVersion(PYTHON_REQUIRE):
             print("Error: Python version " + cur_python_ver + " < " + PYTHON_REQUIRE)
             return False
-        os.system("%s -m pip install ansible==%s" % (sys.executable, ABSIBLE_REQUIRE))
-        os.system("%s -m pip install tornado==%s" % (sys.executable, TORNADO_REQUIRE))
+        os.system("%s -m pip install ansible-runner==%s" % (sys.executable, ABSIBLER_REQUIRE))
+        os.system("%s -m pip install sanic==%s" % (sys.executable, SANIC_REQUIRE))
         try:
-            import ansible
+            import ansible_runner
         except ImportError:
             print("Error: I can NOT work without ansible")
-        path = os.path.dirname(ansible.__file__)
-        if LooseVersion(ansible.__version__) >= LooseVersion(ABSIBLE_REQUIRE):
+        # path = os.path.dirname(ansible.__file__)
+        if LooseVersion(ansible_runner.__version__) >= LooseVersion(ABSIBLER_REQUIRE):
             install.run(self)
-            #self.init_plugin_file(path)
+            # self.init_plugin_file(path)
             self.init_config_file()
             print("\033[1;37mAnsible-api v%s install complete.\033[0m" %
                   __version__)
         else:
-            print("Error: ansible version " + ansible.__version__ + " < " + ABSIBLE_REQUIRE)
+            print("Error: ansible version " + ansible_runner.__version__ + " < " + ABSIBLER_REQUIRE)
 
     def init_config_file(self):
         for p in self._configfiles:
@@ -69,19 +70,20 @@ class CustomInstall(install):
                 os.system(' '.join(['cp', f, file]))
                 print("Plugin file: %s copy successfully" % file)
 
-setup(
-        name='ansible-api',
-        version=__version__,
-        scripts=['bin/ansible-api'],
-        package_dir={'': 'src'},
-        packages=find_packages('src'),
-        python_requires='>='+PYTHON_REQUIRE,
-        install_requires=['tornado=='+TORNADO_REQUIRE,'ansible=='+ABSIBLE_REQUIRE],
-        cmdclass={'install': CustomInstall},
 
-        author="lfbear",
-        author_email="lfbear@gmail.com",
-        description="A restful HTTP API for ansible 2.x by tornado",
-        license="GPLv3",
-        url="https://github.com/lfbear/ansible-api"
-    )
+setup(
+    name='ansible-api',
+    version=__version__,
+    scripts=['bin/ansible-api'],
+    package_dir={'': 'src'},
+    packages=find_packages('src'),
+    python_requires='>=' + PYTHON_REQUIRE,
+    install_requires=['sanic==' + SANIC_REQUIRE, 'ansible==' + ABSIBLER_REQUIRE],
+    cmdclass={'install': CustomInstall},
+
+    author="lfbear",
+    author_email="lfbear@gmail.com",
+    description="A restful HTTP API for ansible",
+    license="GPLv3",
+    url="https://github.com/lfbear/ansible-api"
+)

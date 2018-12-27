@@ -1,13 +1,10 @@
 #!/usr/bin/env python
 # coding: utf-8
 
-# A restful HTTP API for ansible by tornado
-# Base on ansible and ansible-runner
+# A restful HTTP API for ansible
+# Base on ansible-runner and sanic
 # Github <https://github.com/lfbear/ansible-api>
 # Author: lfbear, pgder
-
-from __future__ import (absolute_import, division, print_function)
-__metaclass__ = type
 
 try:
     import ConfigParser

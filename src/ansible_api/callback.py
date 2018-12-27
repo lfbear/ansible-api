@@ -1,15 +1,13 @@
 #!/usr/bin/env python
 # coding: utf-8
 
-# A restful HTTP API for ansible by tornado
-# Base on ansible-runner
+# A restful HTTP API for ansible
+# Base on ansible-runner and sanic
 # Github <https://github.com/lfbear/ansible-api>
 # Author: lfbear
 
-from __future__ import (absolute_import, division, print_function)
-__metaclass__ = type
-
-from .websocket import Message
+import asyncio
+from .realtimemsg import RealTimeMessage
 from .report import Reporter
 
 
@@ -32,7 +30,7 @@ class CallBack(object):
         fmt = rpt.tidy()
         detail = rpt.detail()
         if fmt:
-            Message.send(fmt)
+            asyncio.run(RealTimeMessage.send(fmt))
         if detail:
             self._result.append(detail)
 
@@ -65,7 +63,8 @@ class CallBack(object):
                 fmt = rpt.tidy()
                 detail = rpt.detail()
                 if fmt:
-                    Message.send(fmt)
+                    asyncio.run(RealTimeMessage.send(fmt))
+                    # await RealTimeMessage.send(fmt)
                 if detail:
                     self._result.append(detail)
         # print(data, "status")

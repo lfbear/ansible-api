@@ -1,18 +1,13 @@
 #!/usr/bin/env python
 # coding: utf-8
 
-# A restful HTTP API for ansible by tornado
-# Base on ansible and ansible-runner
+# A restful HTTP API for ansible
+# Base on ansible-runner and sanic
 # Github <https://github.com/lfbear/ansible-api>
 # Author: lfbear
 
-from __future__ import (absolute_import, division, print_function)
-
-__metaclass__ = type
-
-import json
-import logging
 import os
+import logging
 from . import __version__
 
 __all__ = ['Tool']
@@ -48,11 +43,3 @@ class Tool(object):
         m = hashlib.md5()
         m.update(string.encode('utf-8'))
         return m.hexdigest()
-
-    @staticmethod
-    def jsonal(data):
-        return json.dumps(data)
-
-    @staticmethod
-    def parsejson(string):
-        return json.loads(string.decode('utf-8'))

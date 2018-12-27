@@ -1,8 +1,8 @@
 #!/usr/bin/env python
 # coding: utf-8
 
-# A restful HTTP API for ansible by tornado
-# Base on ansible and ansible-runner
+# A restful HTTP API for ansible
+# Base on ansible-runner and sanic
 # Github <https://github.com/lfbear/ansible-api>
 # Author: lfbear
 
@@ -16,7 +16,7 @@ import getopt
 
 from ansible_api.tool import Tool
 from ansible_api.config import Config
-from ansible_api.webapi import WebApi
+from ansible_api.server import Server
 from ansible_api import __version__
 
 if __name__ == "__main__":
@@ -53,7 +53,6 @@ if __name__ == "__main__":
         ' '.join(['Ansible API', 'Start...', '(', 'PID =', str(os.getpid()), ')']))
 
     try:
-        app = WebApi()
-        app.start()
+        Server()
     except Exception as e:
         Tool.LOGGER.exception(e)

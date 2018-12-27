@@ -1,15 +1,16 @@
 #!/usr/bin/env python
 # coding: utf-8
 
-# A restful HTTP API for ansible by tornado
-# Base on ansible and ansible-runner
+# A restful HTTP API for ansible
+# Base on ansible-runner and sanic
 # Github <https://github.com/lfbear/ansible-api>
 # Author: lfbear
 
-from __future__ import (absolute_import, division, print_function)
-
-__metaclass__ = type
+import time
 from .tool import Tool
+from . import RTM_TYPE_OVERVIEW
+from . import RTM_TYPE_DETAIL
+from . import RTM_CHANNEL_DEFAULT
 
 
 class Reporter(object):
@@ -90,3 +91,47 @@ class Reporter(object):
             detail['task_name'] = detail['name']
             del detail['res'], detail['event'], detail['type'], detail['task_action']
             return detail
+
+    @staticmethod
+    def fmt_realtime(data):
+        msg = dict()
+        msg_ident = data.get('runner_ident', '').split('@', 1)
+        if len(msg_ident) == 2:
+            task_name, msg_pool = msg_ident
+        else:
+            task_name = msg_ident[0]
+            msg_pool = RTM_CHANNEL_DEFAULT
+        task_info = task_name.split('#', 1)
+        if len(task_info) == 2:
+            msg['task_name'], msg['task_id'] = task_info
+        else:
+            msg['task_name'] = task_info[0]
+            msg['task_id'] = '#'
+
+        msg['type'] = RTM_TYPE_DETAIL if data['type'] == 'task_run' else RTM_TYPE_OVERVIEW
+        msg['ctime'] = time.strftime('%Y-%m-%d %H:%M:%S', time.localtime())
+
+        if msg.get('type') == RTM_TYPE_DETAIL:
+            msg['msg'] = dict(host=data['host'], task_name=data['name'], rc=data['rc'])
+            options = ['stdout', 'stderr', 'cmd', 'changed', 'start', 'delta']
+            for f in options:
+                if f in data['res']:
+                    msg['msg'][f] = data['res'][f]
+            msg['rc'] = data['rc']
+            # info = "%s\t%s\t%s\t%s\tOK" % (
+            # msg_pool, msg.get('task_name'), msg.get('task_id'), msg.get('msg').get('host'))
+            if msg['rc'] != 0:
+                Tool.LOGGER.warning("ERROR DETAIL: %s\t%s" % (msg_pool, msg))
+        else:
+            options = ['host_list', 'task_list', 'changed', 'failures', 'ok', 'skipped']
+            for f in options:
+                if f in data:
+                    msg[f] = data[f]
+            msg['msg'] = dict(kind=data['type'], value=data['name'])
+            # info = "%s\t%s\t%s\t%s\t%s" % (
+            # msg_pool, msg.get('task_name'), msg.get('task_id'), msg.get('msg').get('kind'),
+            # msg.get('msg').get('value'))
+        Tool.LOGGER.debug("[%s@websocket] %s" % (msg_pool, msg))
+
+        return msg_pool, msg
+
