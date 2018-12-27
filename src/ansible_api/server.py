@@ -36,9 +36,9 @@ class Server(object):
             if len(Config.get('allow_ip')) and request.ip not in Config.get('allow_ip'):
                 return text('Your IP (%s) is not allowed!' % request.ip, status=403)
 
-        app.run(host=Config.get('host'), port=Config.get('port'), workers=Config.get('workers'), debug=not daemon)
-
         # print config contents
         config = Config().__dict__
         config['sign_key'] = len(config['sign_key']) * '*'  # mask signature key
         Tool.LOGGER.debug("Config at start: %s" % json.dumps(config))
+
+        app.run(host=Config.get('host'), port=Config.get('port'), workers=Config.get('workers'), debug=not daemon)
