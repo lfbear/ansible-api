@@ -22,7 +22,7 @@ class Config(object):
     log_path = '/var/log/ansible-api.log'
     allow_ip = []
     ws_sub = []
-    workers = 4  # default value
+    workers = 1  # default is one worker, multi-worker will case BUG of websocket broadcast
 
     dir_script = ''
     dir_playbook = ''
