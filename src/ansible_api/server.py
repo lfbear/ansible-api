@@ -31,6 +31,8 @@ class Server(object):
         app.add_route(controller.ParseVarsFromFile.as_view(), '/parsevars')
         app.add_websocket_route(controller.Message.websocket, '/message', subprotocols=Config.get('ws_sub'))
 
+        app.config.update(dict(RESPONSE_TIMEOUT=1800))  # timeout for waiting response
+
         @app.middleware('request')
         async def ip_ban(request):
             if len(Config.get('allow_ip')) and request.ip not in Config.get('allow_ip'):
