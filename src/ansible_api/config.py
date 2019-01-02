@@ -41,7 +41,7 @@ class Config(object):
             self.log_path = cf.get('default', 'log_path') if cf.has_option('default', 'log_path') else Config.log_path
             self.allow_ip = cf.get('default', 'allow_ip').split() if cf.has_option('default',
                                                                                    'allow_ip') else Config.allow_ip
-            self.workers = cf.get('default', 'workers') if cf.has_option('default', 'workers') else Config.workers
+            self.workers = int(cf.get('default', 'workers')) if cf.has_option('default', 'workers') else Config.workers
             self.ws_sub = cf.get('default', 'ws_sub').split() if cf.has_option('default', 'ws_sub') else Config.ws_sub
 
         try:

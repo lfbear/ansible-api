@@ -340,14 +340,12 @@ class Message:
 
     async def websocket(request, ws):
         if ws.subprotocol is None:
-            RealTimeMessage.set(RTM_CHANNEL_DEFAULT, ws)
+            channel = RTM_CHANNEL_DEFAULT
         else:
-            RealTimeMessage.set(ws.subprotocol, ws)
+            channel = ws.subprotocol
+        RealTimeMessage.set(channel, ws)
         while True:
-            # data = 'hello!'
-            # print('I say: ' + data)
-            # await ws.send(data)
             data = await ws.recv()
-            msg = 'you say [%s]: ' % ws.subprotocol + data
-            print('--- websocket ---', msg)
+            msg = 'you say [%s] @%s: ' % (data, channel)
+            # print('--- websocket debug ---', msg)
             await ws.send(msg)

@@ -19,7 +19,7 @@ from . import controller
 class Server(object):
 
     def __init__(self, daemon):
-        app = Sanic()
+        app = Sanic('ansible-api')
 
         app.add_route(controller.Main.as_view(), '/')
         app.add_route(controller.NonBlockTest.as_view(), '/test')
