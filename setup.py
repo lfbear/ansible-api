@@ -28,8 +28,6 @@ PYTHON_REQUIRE = '3.7'
 class CustomInstall(install):
     _configfiles = [('/etc/ansible/', ['data/api.cfg'])]
 
-    # _pluginfiles = [('plugins/connection', ['data/multipoller.py'])]
-
     def run(self):
         cur_python_ver = "%d.%d" % (sys.version_info[0], sys.version_info[1])
         if LooseVersion(cur_python_ver) < LooseVersion(PYTHON_REQUIRE):
