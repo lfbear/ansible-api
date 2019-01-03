@@ -6,7 +6,7 @@ python version >= 3.7
 ## What is it?
 
 [Ansible](https://github.com/ansible/ansible/) is a radically simple IT automation system.
-If you are trying to use it and not like CLI, you can try me now. I can provide you use ansible by A RESTful HTTP Api
+If you are trying to use it and not like CLI, you can try me now. I can provide you use ansible by A RESTful HTTP Api and a runtime processing websocket api, you can see all details.
 
 ## Changelog
 
