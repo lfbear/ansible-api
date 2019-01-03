@@ -19,7 +19,7 @@ If you are trying to use it and not like CLI, you can try me now. I can provide 
 
 ## Structure chart
 
-![image](https://github.com/lfbear/ansible-api/raw/master/data/ansible-api.png)
+![image](https://github.com/lfbear/ansible-api/raw/master/data/structure.png)
 
 ## How to install
 
