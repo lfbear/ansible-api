@@ -131,7 +131,7 @@ class Reporter(object):
             # info = "%s\t%s\t%s\t%s\t%s" % (
             # msg_pool, msg.get('task_name'), msg.get('task_id'), msg.get('msg').get('kind'),
             # msg.get('msg').get('value'))
-        Tool.LOGGER.debug("[%s@websocket] %s" % (msg_pool, msg))
+        # Tool.LOGGER.debug("[%s@websocket] %s" % (msg_pool, msg))
 
         return msg_pool, msg
 
