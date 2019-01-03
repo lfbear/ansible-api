@@ -17,12 +17,16 @@ If you are trying to use it and not like CLI, you can try me now. I can provide 
 - 0.2.1 optimize log and allow mutil-instance in the same host
 - 0.2.0 support websocket, remove code invaded in ansible
 
+## Structure chart
+
+![image](https://github.com/lfbear/ansible-api/raw/master/data/ansible-api.png)
+
 ## How to install
 
 - [preparatory work] python version >= 3.7 (use asyncio featrue)
 - pip3 install git+https://github.com/lfbear/ansible-api.git
 
-## How to use it
+## How to start it
 
 - default configuration: /etc/ansible/api.cfg
 - start: 
