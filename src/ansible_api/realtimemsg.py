@@ -37,7 +37,11 @@ class RealTimeMessage:
         if group in RealTimeMessage.UserList:
             for ws in RealTimeMessage.UserList.get(group, []):
                 if ws.open:
-                    await ws.send(json.dumps(msg))
+                    try:
+                        await ws.send(json.dumps(msg))
+                    # FOR websockets.exceptions.ConnectionClosed: WebSocket connection is closed: code = 1006
+                    except BaseException as e:
+                        Tool.LOGGER.exception(e)
                 else:
                     # WSUser.UserList = [u for u in WSUser.UserList if u != x]
                     RealTimeMessage.UserList.get(group).remove(ws)
