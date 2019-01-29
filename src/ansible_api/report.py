@@ -84,9 +84,10 @@ class Reporter(object):
             # print('---->', self._detail)
             detail = self._detail.copy()
             options = ['cmd', 'changed', 'failures', 'ok', 'skipped', 'unreachable']
-            for o in options:
-                if o in detail.get('res', []):
-                    detail[o] = detail['res'][o]
+            if isinstance(detail.get('res'), dict):
+                for o in options:
+                    if o in detail['res']:
+                        detail[o] = detail['res'][o]
 
             detail['task_name'] = detail['name']
             del detail['res'], detail['event'], detail['type'], detail['task_action']
