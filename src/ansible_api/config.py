@@ -23,6 +23,7 @@ class Config(object):
     allow_ip = []
     ws_sub = []
     workers = 1  # default is one worker, multi-worker will case BUG of websocket broadcast
+    timeout = 3600  # timeout for waiting response
 
     dir_script = ''
     dir_playbook = ''
@@ -43,6 +44,7 @@ class Config(object):
                                                                                    'allow_ip') else Config.allow_ip
             self.workers = int(cf.get('default', 'workers')) if cf.has_option('default', 'workers') else Config.workers
             self.ws_sub = cf.get('default', 'ws_sub').split() if cf.has_option('default', 'ws_sub') else Config.ws_sub
+            self.timeout = int(cf.get('default', 'timeout')) if cf.has_option('default', 'timeout') else Config.timeout
 
         try:
             cf.options('directory')
