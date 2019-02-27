@@ -24,7 +24,7 @@ If you are trying to use it and not like CLI, you can try me now. I can provide 
 ## How to install
 
 - [preparatory work] python version >= 3.7 (use asyncio featrue)
-- pip3 install git+https://github.com/lfbear/ansible-api.git
+- ```pip3 install ansible-api```
 
 ## How to start it
 

@@ -13,8 +13,6 @@ import os
 import sys
 import pkg_resources
 
-
-
 sys.path.insert(0, os.path.abspath('src'))
 from ansible_api import __version__
 
@@ -45,13 +43,12 @@ class CustomInstall(install):
         if LooseVersion(ansible.__version__) >= LooseVersion(ABSIBLE_REQUIRE) and \
                 LooseVersion(pkg_resources.require("ansible_runner")[0].version) >= LooseVersion(ABSIBLER_REQUIRE):
             install.run(self)
-            # self.init_plugin_file(path)
             self.init_config_file()
             print("\033[1;37mAnsible-api v%s install complete.\033[0m" %
                   __version__)
         else:
             print("Error: ansible [%s] or ansible-runner [%s] version too low" %
-                  (ansible_runner.__version__,pkg_resources.require("ansible_runner")[0].version))
+                  (ansible_runner.__version__, pkg_resources.require("ansible_runner")[0].version))
 
     def init_config_file(self):
         for p in self._configfiles:
@@ -66,16 +63,9 @@ class CustomInstall(install):
                     print(
                         "\033[4;37mConfiguration file exists: %s\033[0m" % file)
 
-    def init_plugin_file(self, ansible_path):
-        for p in self._pluginfiles:
-            path = p[0]
-            if path[0:1] != '/':
-                path = os.path.join(ansible_path, path)
-            for f in p[1]:
-                file = os.path.join(path, os.path.basename(f))
-                os.system(' '.join(['cp', f, file]))
-                print("Plugin file: %s copy successfully" % file)
 
+with open("README.md", "r") as fh:
+    long_description = fh.read()
 
 setup(
     name='ansible-api',
@@ -92,6 +82,20 @@ setup(
     author="lfbear",
     author_email="lfbear@gmail.com",
     description="A restful HTTP API for ansible",
+    long_description=long_description,
+    long_description_content_type="text/markdown",
     license="GPLv3",
-    url="https://github.com/lfbear/ansible-api"
+    url="https://github.com/lfbear/ansible-api",
+    classifiers=[
+        "Development Status :: 5 - Production/Stable",
+        "Programming Language :: Python :: 3.7",
+        "Operating System :: OS Independent",
+        "Topic :: System :: Systems Administration",
+        "Topic :: Utilities",
+        "License :: OSI Approved :: GNU General Public License v3 (GPLv3)",
+    ],
+    project_urls={  # Optional
+        'Bug Reports': 'https://github.com/lfbear/ansible-api/issues',
+        'Source': 'https://github.com/lfbear/ansible-api',
+    },
 )
