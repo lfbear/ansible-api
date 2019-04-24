@@ -51,7 +51,7 @@ class CallBack(object):
     def status_drawer(self, data):
         self._drawer.append(data)
 
-    def status_handler(self, data, runner_config):
+    def status_handler(self, data, runner_config=None):
         status = data.get('status', '') if isinstance(data, dict) else data
         for item in self._drawer:
             if item.get('status', None) == status:
