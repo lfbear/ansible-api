@@ -1,0 +1,7 @@
+.remote-sync.json
+.ftpconfig
+.DS_Store
+.idea/
+.git/
+.vscode/
+venv/

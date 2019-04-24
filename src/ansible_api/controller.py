@@ -1,26 +1,28 @@
 #!/usr/bin/env python
 # coding: utf-8
 
-# A restful HTTP API for ansible by tornado
-# Base on ansible 2.x
+# A restful HTTP API for ansible
+# Base on ansible-runner and sanic
 # Github <https://github.com/lfbear/ansible-api>
-# Author: lfbear
-
-from __future__ import (absolute_import, division, print_function)
-__metaclass__ = type
+# Author: lfbear, pgder
 
 import os
-import yaml
+import sys
 import time
+import yaml
+import asyncio
+import ansible_runner
+import concurrent.futures
 
 from jinja2 import Environment, meta
-from tornado.web import RequestHandler, HTTPError, asynchronous
-import tornado.gen
-from concurrent import futures
-from ansible_api.tool import Tool
-from ansible_api.config import Config
-from ansible_api.core import Api
+from sanic.views import HTTPMethodView
+from sanic.response import json
 
+from .tool import Tool
+from .config import Config
+from .realtimemsg import RealTimeMessage
+from .callback import CallBack
+from . import RTM_CHANNEL_DEFAULT
 
 __all__ = [
     'Main',
@@ -30,10 +32,9 @@ __all__ = [
     'ParseVarsFromFile',
     'Command',
     'Playbook',
-    'AsyncTest',
+    'Message',
+    'NonBlockTest',
 ]
-
-executor = futures.ThreadPoolExecutor(int(Config.Get('thread_pool_size')))
 
 
 class ErrorCode(object):
@@ -42,288 +43,309 @@ class ErrorCode(object):
     ERRCODE_BIZ = 2
 
 
-class Controller(RequestHandler):
-
-    def __init__(self, application, request, **kwargs):
-        super(Controller, self).__init__(application, request, **kwargs)
-        if len(Config.Get('allow_ip')) and self.request.remote_ip not in Config.Get('allow_ip'):
-            raise HTTPError(403, 'Your ip(%s) is forbidden' %
-                            self.request.remote_ip)
+class MyHttpView(HTTPMethodView):
+    pass
 
 
-class Main(Controller):
+class Main(MyHttpView):
 
-    def get(self):
-        self.write(Tool.jsonal(
-            {'message': "Hello, I am Ansible Api", 'rc': ErrorCode.ERRCODE_NONE}))
-
-
-class AsyncTest(Controller):
-
-    @tornado.gen.coroutine
-    def get(self):
-        msg = yield executor.submit(self.test, 10)
-        self.write(Tool.jsonal(
-            {'message': msg, 'rc': ErrorCode.ERRCODE_NONE}))
-        self.finish()
-
-    def test(self, s):
-        time.sleep(s)
-        return 'i have slept 10 s'
+    def get(self, request):
+        return json({'message': "Hello, I am Ansible Api", 'rc': ErrorCode.ERRCODE_NONE})
 
 
-class Command(Controller):
+class NonBlockTest(MyHttpView):
 
-    def get(self):
-        self.write(Tool.jsonal(
-            {'error': "Forbidden in get method", 'rc': ErrorCode.ERRCODE_SYS}))
+    async def get(self, request):
+        start = time.time()
+        msg = await self.run_block()
+        end = time.time() - start
+        return json({'message': msg + 'and total cost time: %s' % end, 'rc': ErrorCode.ERRCODE_NONE})
 
-    @tornado.gen.coroutine
-    def post(self):
-        data = Tool.parsejson(self.request.body)
-        badcmd = ['reboot', 'su', 'sudo', 'dd',
-                  'mkfs', 'shutdown', 'half', 'top']
-        name = data['n'].encode('utf-8').decode()
-        module = data['m']
-        arg = data['a'].encode('utf-8').decode()
-        target = data['t']
-        sign = data['s']
-        sudo = True if data['r'] else False
-        forks = data.get('c', 50)
-        cmdinfo = arg.split(' ', 1)
-        Tool.LOGGER.info('run: {0}, {1}, {2}, {3}, {4}, {5}'.format(
-            name, target, module, arg, sudo, forks))
-        hotkey = name + module + target + Config.Get('sign_key')
-        check_str = Tool.getmd5(hotkey)
+    async def run_block(self):
+        await asyncio.sleep(10)
+        return 'I have slept 10 s'
+
+
+class Command(MyHttpView):
+
+    async def post(self, request):
+        data = request.json if request.json is not None else {}
+        for test in ['n', 'm', 't', 's']:  # required parameter check
+            if test not in data:
+                return json({'error': "Lack of necessary parameters [%s]" % test,
+                             'rc': ErrorCode.ERRCODE_BIZ})
+
+        bad_cmd = ['reboot', 'su', 'sudo', 'dd',
+                   'mkfs', 'shutdown', 'half', 'top']
+        name = data.get('n').encode('utf-8').decode()
+        module = data.get('m')
+        arg = data.get('a', '').encode('utf-8').decode()
+        target = data.get('t')
+        sign = data.get('s')
+        # sudo = True if data.get('r') else False # discard
+        # forks = data.get('c', 50) # discard
+        cmd_info = arg.split(' ', 1)
+        Tool.LOGGER.info('run: {0}, {1}, {2}, {3}'.format(
+            name, target, module, arg))
+        hot_key = name + module + target + Config.get('sign_key')
+        check_str = Tool.getmd5(hot_key)
         if sign != check_str:
-            self.write(Tool.jsonal(
-                {'error': "Sign is error", 'rc': ErrorCode.ERRCODE_BIZ}))
+            return json({'error': "Sign is error", 'rc': ErrorCode.ERRCODE_BIZ})
         else:
-            if module in ('shell', 'command') and cmdinfo[0] in badcmd:
-                self.write(Tool.jsonal(
-                    {'error': "This is danger shell: " + cmdinfo[0], 'rc': ErrorCode.ERRCODE_BIZ}))
+            if module in ('shell', 'command') and cmd_info[0] in bad_cmd:
+                return json({'error': "This is danger shell: " + cmd_info[0], 'rc': ErrorCode.ERRCODE_BIZ})
             else:
                 try:
-                    response = yield executor.submit(Api.runCmd, name=name, target=target, module=module, arg=arg, sudo=sudo, forks=forks)
-                except BaseException as e:
-                    Tool.LOGGER.exception('A serious error occurs')
-                    self.write(Tool.jsonal(
-                        {'error': str(e), 'rc': ErrorCode.ERRCODE_BIZ}))
-                else:
-                    self.write(response)
+                    cb = CallBack()
+                    cb.status_drawer(dict(status='starting', raw=lambda: dict(
+                        task_name=module, event='playbook_on_play_start', runner_ident=name,
+                        event_data=dict(pattern=target, name=module)),
+                                          after=lambda: dict(task_list=[module])))
+                    loop = asyncio.get_running_loop()
+                    with concurrent.futures.ThreadPoolExecutor() as pool:
+                        response = await loop.run_in_executor(pool, self.run, target, name, module, arg, cb)
+                        # response = yield self.run(target, name, module, arg, cb)
+                        # response = self.run(target, name, module, arg, cb)
+                        return json(dict(rc=response.rc, detail=cb.get_summary()))
+                except Exception as e:
+                    Tool.LOGGER.exception(e)
+                    return json({'error': str(e), 'rc': ErrorCode.ERRCODE_BIZ})
+
+    def run(self, target, name, module, arg, cb):
+        return ansible_runner.interface.run(
+            host_pattern=target, inventory='/etc/ansible/hosts',
+            envvars=dict(PATH=os.environ.get('PATH') + ':' + sys.path[0]),
+            ident=name, module=module, module_args=arg,
+            event_handler=cb.event_handler, status_handler=cb.status_handler
+        )
 
 
-class Playbook(Controller):
+class Playbook(MyHttpView):
 
-    @tornado.gen.coroutine
-    def post(self):
-        data = Tool.parsejson(self.request.body)
+    async def post(self, request):
+        data = request.json if request.json is not None else {}
+        for test in ['n', 'h', 's', 'f']:  # required parameter check
+            if test not in data:
+                return json({'error': "Lack of necessary parameters [%s]" % test,
+                             'rc': ErrorCode.ERRCODE_BIZ})
+
         name = data['n'].encode('utf-8').decode()
         hosts = data['h']
         sign = data['s']
         yml_file = data['f'].encode('utf-8').decode()
-        forks = data.get('c', 50)
-        if not hosts or not yml_file or not sign:
-            self.write(Tool.jsonal(
-                {'error': "Lack of necessary parameters", 'rc': ErrorCode.ERRCODE_SYS}))
+        # forks = data.get('c', 50)
+        hot_key = name + hosts + yml_file + Config.get('sign_key')
+        check_str = Tool.getmd5(hot_key)
+        if sign != check_str:
+            return json({'error': "Sign is error", 'rc': ErrorCode.ERRCODE_BIZ})
         else:
-            hotkey = name + hosts + yml_file + Config.Get('sign_key')
-            check_str = Tool.getmd5(hotkey)
-            if sign != check_str:
-                self.write(Tool.jsonal(
-                    {'error': "Sign is error", 'rc': ErrorCode.ERRCODE_BIZ}))
+            my_vars = {'hosts': hosts}
+            # injection vars in playbook (rule: vars start with "v_" in
+            # post data)
+            for (k, v) in data.items():
+                if k[0:2] == "v_":
+                    my_vars[k[2:]] = v
+            yml_file = Config.get('dir_playbook') + yml_file
+
+            if os.path.isfile(yml_file):
+                task_list = []
+                with open(yml_file, 'r') as contents:
+                    yaml_cnt = yaml.load(contents)
+                    if len(yaml_cnt) > 0 and len(yaml_cnt[0].get('tasks', [])) > 0:
+                        task_list = [x.get('name', 'unnamed') for x in yaml_cnt[0]['tasks']]
+                Tool.LOGGER.info("playbook: {0}, host: {1}".format(yml_file, hosts))
+                try:
+                    cb = CallBack()
+                    cb.event_pepper('playbook_on_play_start', dict(task_list=task_list))
+                    loop = asyncio.get_running_loop()
+                    with concurrent.futures.ThreadPoolExecutor() as pool:
+                        response = await loop.run_in_executor(pool, self.run, hosts, name, yml_file, my_vars, cb)
+                        # response = yield self.run(hosts, name, yml_file, my_vars, cb)
+                        return json(dict(rc=response.rc, detail=cb.get_summary()))
+                except BaseException as e:
+                    Tool.LOGGER.exception(e)
+                    return json({'error': str(e), 'rc': ErrorCode.ERRCODE_BIZ})
             else:
-                myvars = {'hosts': hosts}
-                # injection vars in playbook (rule: vars start with "v_" in
-                # post data)
-                for(k, v) in data.items():
-                    if k[0:2] == "v_":
-                        myvars[k[2:]] = v
-                yml_file = Config.Get('dir_playbook') + yml_file
-                if os.path.isfile(yml_file):
-                    Tool.LOGGER.info("playbook: {0}, host: {1}, forks: {2}".format(
-                        yml_file, hosts, forks))
-                    try:
-                        response = yield executor.submit(Api.runPlaybook, palyname=name, yml_file=yml_file, myvars=myvars, forks=forks)
-                    except BaseException as e:
-                        Tool.LOGGER.exception('A serious error occurs')
-                        self.write(Tool.jsonal(
-                            {'error': str(e), 'rc': ErrorCode.ERRCODE_BIZ}))
-                    else:
-                        self.write(response)
+                return json({'error': "yml file(" + yml_file + ") is not existed",
+                             'rc': ErrorCode.ERRCODE_SYS})
 
-                else:
-                    self.write(Tool.jsonal(
-                        {'error': "yml file(" + yml_file + ") is not existed", 'rc': ErrorCode.ERRCODE_SYS}))
+    def run(self, hosts, name, yml_file, my_vars, cb):
+        return ansible_runner.interface.run(
+            host_pattern=hosts, inventory='/etc/ansible/hosts',
+            envvars=dict(PATH=os.environ.get('PATH') + ':' + sys.path[0]),
+            playbook=yml_file, ident=name, extravars=my_vars,
+            event_handler=cb.event_handler, status_handler=cb.status_handler
+        )
 
 
-class FileList(Controller):
+class FileList(MyHttpView):
 
-    @tornado.gen.coroutine
-    def get(self):
-        path = self.get_argument('type', 'script')
-        sign = self.get_argument('sign', '')
-        allows = ['script', 'playbook', 'authkeys']
+    async def get(self, request):
+        path = request.args.get('type', 'script')
+        sign = request.args.get('sign', '')
+        allows = ['script', 'playbook']
         if path in allows:
-            hotkey = path + Config.Get('sign_key')
-            check_str = Tool.getmd5(hotkey)
+            hot_key = path + Config.get('sign_key')
+            check_str = Tool.getmd5(hot_key)
             if sign != check_str:
-                self.write(Tool.jsonal(
-                    {'error': "Sign is error", 'rc': ErrorCode.ERRCODE_BIZ}))
+                return json({'error': "Sign is error", 'rc': ErrorCode.ERRCODE_BIZ})
             else:
-                path_var = Config.Get('dir_' + path)
+                path_var = Config.get('dir_' + path)
                 if os.path.exists(path_var):
                     Tool.LOGGER.info("read file list: " + path_var)
-                    dirs = yield executor.submit(os.listdir, path_var)
-                    #dirs = os.listdir(path_var)
-                    self.write({'list': dirs})
+                    dirs = os.listdir(path_var)
+                    return json({'list': dirs})
                 else:
-                    self.write(Tool.jsonal(
-                        {'error': "Path is not existed", 'rc': ErrorCode.ERRCODE_SYS}))
+                    return json(
+                        {'error': "Path is not existed", 'rc': ErrorCode.ERRCODE_SYS})
         else:
-            self.write(Tool.jsonal(
-                {'error': "Wrong type in argument", 'rc': ErrorCode.ERRCODE_SYS}))
+            return json(
+                {'error': "Wrong type in argument", 'rc': ErrorCode.ERRCODE_SYS})
 
 
-class FileReadWrite(Controller):
+class FileReadWrite(MyHttpView):
 
-    @tornado.gen.coroutine
-    def get(self):
-        path = self.get_argument('type', 'script')
-        file_name = self.get_argument('name')
-        sign = self.get_argument('sign', '')
-        allows = ['script', 'playbook', 'authkeys']
+    async def get(self, request):
+        path = request.args.get('type', 'script')
+        file_name = request.args.get('name')
+        sign = request.args.get('sign', '')
+        allows = ['script', 'playbook']
         if path in allows:
-            hotkey = path + file_name + Config.Get('sign_key')
-            check_str = Tool.getmd5(hotkey)
+            hot_key = path + file_name + Config.get('sign_key')
+            check_str = Tool.getmd5(hot_key)
             if sign != check_str:
-                self.write(Tool.jsonal(
+                self.finish(json(
                     {'error': "Sign is error", 'rc': ErrorCode.ERRCODE_BIZ}))
             else:
-                file_path = Config.Get('dir_' + path) + file_name
+                file_path = Config.get('dir_' + path) + file_name
                 if os.path.isfile(file_path):
-                    contents = yield executor.submit(self.read_file, file_path)
-                    self.write(Tool.jsonal({'content': contents}))
+                    contents = self.read_file(file_path)
+                    return json({'content': contents})
                 else:
-                    self.write(Tool.jsonal(
-                        {'error': "No such file in script path", 'rc': ErrorCode.ERRCODE_BIZ}))
+                    return json(
+                        {'error': "No such file in script path", 'rc': ErrorCode.ERRCODE_BIZ})
         else:
-            self.write(Tool.jsonal(
-                {'error': "Wrong type in argument", 'rc': ErrorCode.ERRCODE_SYS}))
+            return json(
+                {'error': "Wrong type in argument", 'rc': ErrorCode.ERRCODE_SYS})
 
     @classmethod
-    def read_file(self, file_path):
-        file_object = open(file_path)
+    def read_file(cls, file_path):
         try:
             Tool.LOGGER.info("read from file: " + file_path)
-            contents = file_object.read()
-        except BaseException as err:
+            with open(file_path) as file:
+                contents = file.read()
+        except BaseException:
             Tool.LOGGER.error("failed in reading from file: " + file_path)
             contents = ''
-        finally:
-            file_object.close()
         return contents
 
-    @tornado.gen.coroutine
-    def post(self):
-        data = Tool.parsejson(self.request.body)
-        path = data['p']
-        filename = data['f']
-        content = data['c'].encode('utf-8').decode()
-        sign = data['s']
+    async def post(self, request):
+        data = request.json if request.json is not None else {}
+        path = data.get('p', None)
+        filename = data.get('f', None)
+        content = data.get('c', '').encode('utf-8').decode()
+        sign = data.get('s', None)
         if not filename or not content or not sign or path \
-                not in ['script', 'playbook', 'authkeys']:
-            self.write(Tool.jsonal(
-                {'error': "Lack of necessary parameters", 'rc': ErrorCode.ERRCODE_SYS}))
-        hotkey = path + filename + Config.Get('sign_key')
-        check_str = Tool.getmd5(hotkey)
+                not in ['script', 'playbook']:
+            return json(
+                {'error': "Lack of necessary parameters", 'rc': ErrorCode.ERRCODE_SYS})
+        hot_key = path + filename + Config.get('sign_key')
+        check_str = Tool.getmd5(hot_key)
         if sign != check_str:
-            self.write(Tool.jsonal(
-                {'error': "Sign is error", 'rc': ErrorCode.ERRCODE_BIZ}))
+            return json({'error': "Sign is error", 'rc': ErrorCode.ERRCODE_BIZ})
         else:
-            file_path = Config.Get('dir_' + path) + filename
-            if path == 'authkeys':  # allow mkdir in this mode
-                dir_name = os.path.dirname(file_path)
-                os.path.isdir(dir_name) == False and os.mkdir(dir_name)
-            result = yield executor.submit(self.write_file, file_path, content)
-            self.write(Tool.jsonal({'ret': result}))
+            file_path = Config.get('dir_' + path) + filename
+            result = self.write_file(file_path, content)
+            return json({'ret': result})
 
     def write_file(self, file_path, content):
         result = True
         try:
-            file_object = open(file_path, 'w')
-            file_object.write(content)
+            Tool.LOGGER.info("write to file: " + file_path)
+            with open(file_path, 'w') as file:
+                file.write(content)
         except BaseException as err:
             result = False
             Tool.LOGGER.error("failed in writing to file: " + file_path)
-        else:
-            Tool.LOGGER.info("write to file: " + file_path)
-            file_object.close()
+
         return result
 
 
-class FileExist(Controller):
+class FileExist(MyHttpView):
 
-    def get(self):
-        path = self.get_argument('type', 'script')
-        file_name = self.get_argument('name')
-        sign = self.get_argument('sign', '')
+    async def get(self, request):
+        path = request.args.get('type', 'script')
+        file_name = request.args.get('name')
+        sign = request.args.get('sign', '')
         allows = ['script', 'playbook']
         if path in allows:
-            hotkey = path + file_name + Config.Get('sign_key')
-            check_str = Tool.getmd5(hotkey)
+            hot_key = path + file_name + Config.get('sign_key')
+            check_str = Tool.getmd5(hot_key)
             if sign != check_str:
-                self.write(Tool.jsonal(
-                    {'error': "Sign is error", 'rc': ErrorCode.ERRCODE_BIZ}))
+                return json(
+                    {'error': "Sign is error", 'rc': ErrorCode.ERRCODE_BIZ})
             else:
-                file_path = Config.Get('dir_' + path) + file_name
+                file_path = Config.get('dir_' + path) + file_name
                 Tool.LOGGER.info("file exist? " + file_path)
                 if os.path.isfile(file_path):
-                    self.write(Tool.jsonal({'ret': True}))
+                    return json({'ret': True})
                 else:
-                    self.write(Tool.jsonal({'ret': False}))
+                    return json({'ret': False})
         else:
-            self.write(Tool.jsonal(
-                {'error': "Wrong type in argument", 'rc': ErrorCode.ERRCODE_SYS}))
+            return json(
+                {'error': "Wrong type in argument", 'rc': ErrorCode.ERRCODE_SYS})
 
 
-class ParseVarsFromFile(Controller):
+class ParseVarsFromFile(MyHttpView):
 
-    @tornado.gen.coroutine
-    def get(self):
-        file_name = self.get_argument('name')
-        sign = self.get_argument('sign', '')
-        hotkey = file_name + Config.Get('sign_key')
-        check_str = Tool.getmd5(hotkey)
+    async def get(self, request):
+        file_name = request.args.get('name')
+        sign = request.args.get('sign', '')
+        hot_key = file_name + Config.get('sign_key')
+        check_str = Tool.getmd5(hot_key)
         if sign != check_str:
-            self.write(Tool.jsonal(
-                {'error': "Sign is error", 'rc': ErrorCode.ERRCODE_BIZ}))
+            return json({'error': "Sign is error", 'rc': ErrorCode.ERRCODE_BIZ})
         else:
-            file_path = Config.Get('dir_playbook') + file_name
+            file_path = Config.get('dir_playbook') + file_name
             if os.path.isfile(file_path):
                 Tool.LOGGER.info("parse from file: " + file_path)
-                var = yield executor.submit(self.parse_vars, file_path)
-                self.write({'vars': var})
+                var = self.parse_vars(file_path)
+                return json({'vars': var})
             else:
-                self.write(Tool.jsonal(
-                    {'error': "No such file in script path", 'rc': ErrorCode.ERRCODE_SYS}))
+                return json({'error': "No such file in script path", 'rc': ErrorCode.ERRCODE_SYS})
 
     def parse_vars(self, file_path):
         contents = FileReadWrite.read_file(file_path)
         env = Environment()
         ignore_vars = []
-        yamlstream = yaml.load(contents)
-        for yamlitem in yamlstream:
-            if isinstance(yamlitem, dict) and yamlitem.get('vars_files', []) and len(yamlitem['vars_files']) > 0:
-                for vf in yamlitem['vars_files']:
-                    tmp_file = Config.Get('dir_playbook') + vf
+        yaml_stream = yaml.load(contents)
+        for yaml_item in yaml_stream:
+            if isinstance(yaml_item, dict) and yaml_item.get('vars_files', []) and len(yaml_item['vars_files']) > 0:
+                for vf in yaml_item['vars_files']:
+                    tmp_file = Config.get('dir_playbook') + vf
                     if os.path.isfile(tmp_file):
-                        tmp_vars = yaml.load(file(tmp_file))
-                        if isinstance(tmp_vars, dict):
-                            ignore_vars += tmp_vars.keys()
+                        with open(tmp_file, 'r') as fc:
+                            tmp_vars = yaml.load(fc)
+                            if isinstance(tmp_vars, dict):
+                                ignore_vars += tmp_vars.keys()
         if len(ignore_vars) > 0:
             Tool.LOGGER.info("skip vars: " + ",".join(ignore_vars))
         ast = env.parse(contents)
         var = list(meta.find_undeclared_variables(ast))
         var = list(set(var).difference(set(ignore_vars)))
         return var
+
+
+class Message:
+
+    async def websocket(request, ws):
+        if ws.subprotocol is None:
+            channel = RTM_CHANNEL_DEFAULT
+        else:
+            channel = ws.subprotocol
+        RealTimeMessage.set(channel, ws)
+        while True:
+            data = await ws.recv()
+            msg = 'you say [%s] @%s: ' % (data, channel)
+            # print('--- websocket debug ---', msg)
+            await ws.send(msg)
