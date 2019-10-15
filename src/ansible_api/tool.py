@@ -45,7 +45,7 @@ class Tool(object):
         return m.hexdigest()
     
    @staticmethod
-    def getsha256(string):
+    def gethash(string):
         import hashlib
         m = hashlib.sha256()
         m.update(string.encode('utf-8'))
