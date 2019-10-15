@@ -1,4 +1,4 @@
-# ansible-api v0.5.0
+# ansible-api v0.5.1
 
 A restful http api for ansible
 python version >= 3.7
@@ -10,6 +10,7 @@ If you are trying to use it and not like CLI, you can try me now. I can provide 
 
 ## Changelog
 
+- 0.5.1 replace MD5 hashing with SHA256
 - 0.5.0 replace tornado with sanic, more lightly (python>=3.7) 
 - 0.3.0 using ansible-runner as middleware
 - 0.2.6 adaptive ansible 2.6.4 and add asynchronization mode
