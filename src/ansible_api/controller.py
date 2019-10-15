@@ -88,7 +88,7 @@ class Command(MyHttpView):
         Tool.LOGGER.info('run: {0}, {1}, {2}, {3}'.format(
             name, target, module, arg))
         hot_key = name + module + target + Config.get('sign_key')
-        check_str = Tool.getmd5(hot_key)
+        check_str = Tool.getsha256(hot_key)
         if sign != check_str:
             return json({'error': "Sign is error", 'rc': ErrorCode.ERRCODE_BIZ})
         else:
@@ -135,7 +135,7 @@ class Playbook(MyHttpView):
         yml_file = data['f'].encode('utf-8').decode()
         # forks = data.get('c', 50)
         hot_key = name + hosts + yml_file + Config.get('sign_key')
-        check_str = Tool.getmd5(hot_key)
+        check_str = Tool.getsha256(hot_key)
         if sign != check_str:
             return json({'error': "Sign is error", 'rc': ErrorCode.ERRCODE_BIZ})
         else:
@@ -186,7 +186,7 @@ class FileList(MyHttpView):
         allows = ['script', 'playbook']
         if path in allows:
             hot_key = path + Config.get('sign_key')
-            check_str = Tool.getmd5(hot_key)
+            check_str = Tool.getsha256(hot_key)
             if sign != check_str:
                 return json({'error': "Sign is error", 'rc': ErrorCode.ERRCODE_BIZ})
             else:
@@ -212,7 +212,7 @@ class FileReadWrite(MyHttpView):
         allows = ['script', 'playbook']
         if path in allows:
             hot_key = path + file_name + Config.get('sign_key')
-            check_str = Tool.getmd5(hot_key)
+            check_str = Tool.getsha256(hot_key)
             if sign != check_str:
                 self.finish(json(
                     {'error': "Sign is error", 'rc': ErrorCode.ERRCODE_BIZ}))
@@ -250,7 +250,7 @@ class FileReadWrite(MyHttpView):
             return json(
                 {'error': "Lack of necessary parameters", 'rc': ErrorCode.ERRCODE_SYS})
         hot_key = path + filename + Config.get('sign_key')
-        check_str = Tool.getmd5(hot_key)
+        check_str = Tool.getsha256(hot_key)
         if sign != check_str:
             return json({'error': "Sign is error", 'rc': ErrorCode.ERRCODE_BIZ})
         else:
@@ -280,7 +280,7 @@ class FileExist(MyHttpView):
         allows = ['script', 'playbook']
         if path in allows:
             hot_key = path + file_name + Config.get('sign_key')
-            check_str = Tool.getmd5(hot_key)
+            check_str = Tool.getsha256(hot_key)
             if sign != check_str:
                 return json(
                     {'error': "Sign is error", 'rc': ErrorCode.ERRCODE_BIZ})
@@ -302,7 +302,7 @@ class ParseVarsFromFile(MyHttpView):
         file_name = request.args.get('name')
         sign = request.args.get('sign', '')
         hot_key = file_name + Config.get('sign_key')
-        check_str = Tool.getmd5(hot_key)
+        check_str = Tool.getsha256(hot_key)
         if sign != check_str:
             return json({'error': "Sign is error", 'rc': ErrorCode.ERRCODE_BIZ})
         else:
