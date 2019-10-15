@@ -43,3 +43,10 @@ class Tool(object):
         m = hashlib.md5()
         m.update(string.encode('utf-8'))
         return m.hexdigest()
+    
+   @staticmethod
+    def getsha256(string):
+        import hashlib
+        m = hashlib.sha256()
+        m.update(string.encode('utf-8'))
+        return m.hexdigest()
