@@ -25,6 +25,7 @@ class CallBack(object):
         self._pepper[event] = data
 
     def event_handler(self, data):
+        # print(data, "---event---")
         rpt = Reporter(data)
         rpt.adorn(self._pepper)
         fmt = rpt.tidy()
@@ -67,4 +68,4 @@ class CallBack(object):
                     # await RealTimeMessage.send(fmt)
                 if detail:
                     self._result.append(detail)
-        # print(data, "status")
+        # print(data, "---status---")

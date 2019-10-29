@@ -7,8 +7,8 @@
 # Author: lfbear
 
 
-# update at 2018.12.27
-__version__ = '0.5.0'
+# update at 2019.10.29
+__version__ = '0.5.1'
 
 RTM_TYPE_OVERVIEW = 5
 RTM_TYPE_DETAIL = 6
