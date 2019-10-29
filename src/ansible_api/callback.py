@@ -25,7 +25,7 @@ class CallBack(object):
         self._pepper[event] = data
 
     def event_handler(self, data):
-        print(data, "---event---")
+        # print(data, "---event---")
         rpt = Reporter(data)
         rpt.adorn(self._pepper)
         fmt = rpt.tidy()
