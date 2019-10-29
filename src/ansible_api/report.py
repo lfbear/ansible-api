@@ -25,14 +25,15 @@ class Reporter(object):
         self._after = {}
 
     def tidy(self):
-        if self._raw.get('event', None) is not None:
-            result = dict()
+        event = self._raw.get('event', None)
+        if event is not None:
+            result = dict(event=event)
             result['runner_ident'] = self._raw.get('runner_ident', '')
-            result['event'] = self._raw.get('event')
             result['uuid'] = self._raw.get('uuid', '')
             event_data = self._raw.get('event_data', {})
-            result['pid'] = event_data.get('pid')
-            if result['event'][:10] == 'runner_on_':
+            result['pid'] = event_data.get('pid', None)
+
+            if event == 'runner_on_ok' or event == 'runner_on_failed':
                 result['type'] = 'task_run'
                 result['name'] = event_data.get('task')
                 result['host'] = event_data.get('remote_addr')
@@ -41,21 +42,56 @@ class Reporter(object):
                 result['rc'] = event_data.get('res', {}).get('rc')
                 if 'stderr' in event_data.get('res', {}):
                     result['stderr'] = event_data.get('res', {}).get('stderr')
+                if 'msg' in event_data.get('res', {}):  # ansible level error
+                    result['stderr'] = event_data.get('res', {}).get('msg')
                 if 'stdout' in event_data.get('res', {}):
                     result['stdout'] = event_data.get('res', {}).get('stdout')
-                self._detail = result
-            elif result['event'] == 'playbook_on_play_start':
+                self._detail = result  # sync data to RESTful Api
+            elif event == 'runner_on_unreachable':
+                result['type'] = 'task_run'
+                result['name'] = event_data.get('task')
+                result['host'] = event_data.get('remote_addr')
+                result['task_action'] = event_data.get('task_action')
+                result['rc'] = 251
+                result['res'] = event_data.get('res')
+                result['res']['stderr'] = result['stderr'] = event_data.get('res', {}).get('msg')
+                self._detail = result  # sync data to RESTful Api
+            elif event == 'runner_on_start':  # ignore this event
+                Tool.LOGGER.info('[event: runner_on_start] %s on hosts %s' %
+                                 (event_data.get('task'), event_data.get('host')))
+                return False
+            elif event == 'runner_on_skipped':  # ignore this event
+                Tool.LOGGER.debug('[event: runner_on_skipped] %s on hosts %s' %
+                                 (event_data.get('task'), event_data.get('host')))
+                return False
+            elif event == 'runner_retry':  # ignore this event
+                Tool.LOGGER.debug('[event: runner_retry] %s on hosts %s' %
+                                 (event_data.get('task'), event_data.get('host')))
+                return False
+            elif event == 'runner_on_file_diff':  # ignore this event
+                Tool.LOGGER.debug('[event: runner_on_file_diff] %s on hosts %s' %
+                                 (event_data.get('task'), event_data.get('host')))
+                return False
+            elif event == 'runner_item_on_failed':  # ignore this event
+                Tool.LOGGER.debug('[event: runner_item_on_failed] %s on hosts %s' %
+                                 (event_data.get('task'), event_data.get('host')))
+                return False
+            elif event == 'runner_item_on_skipped':  # ignore this event
+                Tool.LOGGER.debug('[event: runner_item_on_skipped] %s on hosts %s' %
+                                 (event_data.get('task'), event_data.get('host')))
+                return False
+            elif event == 'playbook_on_play_start':
                 result['type'] = 'play_start'
                 result['name'] = event_data.get('name')
                 result['host_list'] = event_data.get('pattern').split(',')
                 result['task_list'] = []
                 result['parent_uuid'] = event_data.get('playbook_uuid')
-            elif result['event'] == 'playbook_on_task_start':
+            elif event == 'playbook_on_task_start':
                 result['type'] = 'task_start'
                 result['name'] = event_data.get('name')
                 result['parent_uuid'] = event_data.get('play_uuid')
                 result['task_action'] = event_data.get('task_action')
-            elif result['event'] == 'playbook_on_stats':
+            elif event == 'playbook_on_stats':
                 result['type'] = 'play_stats'
                 result['name'] = 'stat'
                 result['changed'] = event_data.get('changed')
@@ -64,14 +100,40 @@ class Reporter(object):
                 result['processed'] = event_data.get('processed')
                 result['skipped'] = event_data.get('skipped')
                 result['dark'] = event_data.get('dark')
-            # elif result['event'] == 'MORE EVENT NAME'
+            elif event == 'playbook_on_start':  # ignore this event
+                Tool.LOGGER.debug('[event: playbook_on_start] uuid = %s' % event_data.get('uuid'))
+                return False
+            elif event == 'playbook_on_include':  # ignore this event
+                Tool.LOGGER.debug('[event: playbook_on_include] file = %s' % event_data.get('included_file'))
+                return False
+            elif event == 'playbook_on_notify':  # ignore this event
+                Tool.LOGGER.debug('[event: playbook_on_notify] %s at handler %s' %
+                                 (event_data.get('task'), event_data.get('handler')))
+                return False
+            elif event == 'playbook_on_vars_prompt':  # ignore this event
+                Tool.LOGGER.debug('[event: playbook_on_vars_prompt] varname = %s' % event_data.get('varname'))
+                return False
+            elif event == 'playbook_on_handler_task_start':  # ignore this event
+                Tool.LOGGER.debug('[event: playbook_on_handler_task_start] %s at %s' %
+                                 (event_data.get('task'), event_data.get('name')))
+                return False
+            elif event == 'playbook_on_no_hosts_matched':  # ignore this event
+                Tool.LOGGER.debug('[event: playbook_on_no_hosts_matched]')
+                return False
+            elif event == 'playbook_on_no_hosts_remaining':  # ignore this event
+                Tool.LOGGER.debug('[event: playbook_on_no_hosts_remaining]')
+                return False
+            elif event == 'warning':
+                Tool.LOGGER.info('[warning event] %s' % self._raw)
+                return False
+            # elif event == 'MORE EVENT NAME'
             # pass # --- you can add more event filter here ---
             else:
-                Tool.LOGGER.warn('Unknown event name: %s' % result['event'])
+                Tool.LOGGER.warn('[Unknown event name] %s' % result['event'])
                 return False
             # adorn custom contents
-            if result['event'] in self._after:
-                result.update(self._after[result['event']])
+            if event in self._after:
+                result.update(self._after[event])
             return result
         else:
             return False
@@ -113,18 +175,18 @@ class Reporter(object):
         msg['ctime'] = time.strftime('%Y-%m-%d %H:%M:%S', time.localtime())
 
         if msg.get('type') == RTM_TYPE_DETAIL:
-            msg['msg'] = dict(host=data['host'], task_name=data['name'], rc=data['rc'])
+            msg['msg'] = dict(host=data.get('host'), task_name=data.get('name'), rc=data.get('rc'))
             options = ['stdout', 'stderr', 'cmd', 'changed', 'start', 'delta']
             for f in options:
-                if f in data['res']:
+                if data.get('res') and f in data['res']:
                     msg['msg'][f] = data['res'][f]
             msg['rc'] = data['rc']
             # info = "%s\t%s\t%s\t%s\tOK" % (
             # msg_pool, msg.get('task_name'), msg.get('task_id'), msg.get('msg').get('host'))
             if msg['rc'] != 0:
-                Tool.LOGGER.warning("ERROR DETAIL: %s\t%s" % (msg_pool, msg))
+                Tool.LOGGER.warning("[NON-ZERO RETURN CODE] %s\t%s" % (msg_pool, msg))
         else:
-            options = ['host_list', 'task_list', 'changed', 'failures', 'ok', 'skipped']
+            options = ['host_list', 'task_list', 'changed', 'failures', 'unreachable', 'ok', 'skipped']
             for f in options:
                 if f in data:
                     msg[f] = data[f]
@@ -133,6 +195,4 @@ class Reporter(object):
             # msg_pool, msg.get('task_name'), msg.get('task_id'), msg.get('msg').get('kind'),
             # msg.get('msg').get('value'))
         # Tool.LOGGER.debug("[%s@websocket] %s" % (msg_pool, msg))
-
         return msg_pool, msg
-

@@ -17,6 +17,7 @@ import concurrent.futures
 from jinja2 import Environment, meta
 from sanic.views import HTTPMethodView
 from sanic.response import json
+import json as json_raw
 
 from .tool import Tool
 from .config import Config
@@ -75,8 +76,7 @@ class Command(MyHttpView):
                 return json({'error': "Lack of necessary parameters [%s]" % test,
                              'rc': ErrorCode.ERRCODE_BIZ})
 
-        bad_cmd = ['reboot', 'su', 'sudo', 'dd',
-                   'mkfs', 'shutdown', 'half', 'top']
+        bad_cmd = ['reboot', 'su', 'sudo', 'dd', 'mkfs', 'shutdown', 'half', 'top']
         name = data.get('n').encode('utf-8').decode()
         module = data.get('m')
         arg = data.get('a', '').encode('utf-8').decode()
@@ -87,8 +87,7 @@ class Command(MyHttpView):
         cmd_info = arg.split(' ', 1)
         Tool.LOGGER.info('run: {0}, {1}, {2}, {3}'.format(
             name, target, module, arg))
-        hot_key = name + module + target + Config.get('sign_key')
-        check_str = Tool.getmd5(hot_key)
+        check_str = Tool.encrypt_sign(name, module, target, Config.get('sign_key'))
         if sign != check_str:
             return json({'error': "Sign is error", 'rc': ErrorCode.ERRCODE_BIZ})
         else:
@@ -106,6 +105,7 @@ class Command(MyHttpView):
                         response = await loop.run_in_executor(pool, self.run, target, name, module, arg, cb)
                         # response = yield self.run(target, name, module, arg, cb)
                         # response = self.run(target, name, module, arg, cb)
+                        print(cb.get_summary(), '-----')
                         return json(dict(rc=response.rc, detail=cb.get_summary()))
                 except Exception as e:
                     Tool.LOGGER.exception(e)
@@ -126,16 +126,14 @@ class Playbook(MyHttpView):
         data = request.json if request.json is not None else {}
         for test in ['n', 'h', 's', 'f']:  # required parameter check
             if test not in data:
-                return json({'error': "Lack of necessary parameters [%s]" % test,
-                             'rc': ErrorCode.ERRCODE_BIZ})
+                return json({'error': "Lack of necessary parameters [%s]" % test, 'rc': ErrorCode.ERRCODE_BIZ})
 
         name = data['n'].encode('utf-8').decode()
         hosts = data['h']
         sign = data['s']
         yml_file = data['f'].encode('utf-8').decode()
         # forks = data.get('c', 50)
-        hot_key = name + hosts + yml_file + Config.get('sign_key')
-        check_str = Tool.getmd5(hot_key)
+        check_str = Tool.encrypt_sign(name, hosts, yml_file, Config.get('sign_key'))
         if sign != check_str:
             return json({'error': "Sign is error", 'rc': ErrorCode.ERRCODE_BIZ})
         else:
@@ -185,22 +183,19 @@ class FileList(MyHttpView):
         sign = request.args.get('sign', '')
         allows = ['script', 'playbook']
         if path in allows:
-            hot_key = path + Config.get('sign_key')
-            check_str = Tool.getmd5(hot_key)
+            check_str = Tool.encrypt_sign(path, Config.get('sign_key'))
             if sign != check_str:
                 return json({'error': "Sign is error", 'rc': ErrorCode.ERRCODE_BIZ})
             else:
                 path_var = Config.get('dir_' + path)
                 if os.path.exists(path_var):
                     Tool.LOGGER.info("read file list: " + path_var)
-                    dirs = os.listdir(path_var)
+                    dirs = os.listdir(path_var)  # cache it if called frequently
                     return json({'list': dirs})
                 else:
-                    return json(
-                        {'error': "Path is not existed", 'rc': ErrorCode.ERRCODE_SYS})
+                    return json({'error': "Path is not existed", 'rc': ErrorCode.ERRCODE_SYS})
         else:
-            return json(
-                {'error': "Wrong type in argument", 'rc': ErrorCode.ERRCODE_SYS})
+            return json({'error': "Wrong type in argument", 'rc': ErrorCode.ERRCODE_SYS})
 
 
 class FileReadWrite(MyHttpView):
@@ -211,19 +206,16 @@ class FileReadWrite(MyHttpView):
         sign = request.args.get('sign', '')
         allows = ['script', 'playbook']
         if path in allows:
-            hot_key = path + file_name + Config.get('sign_key')
-            check_str = Tool.getmd5(hot_key)
+            check_str = Tool.encrypt_sign(path, file_name, Config.get('sign_key'))
             if sign != check_str:
-                self.finish(json(
-                    {'error': "Sign is error", 'rc': ErrorCode.ERRCODE_BIZ}))
+                self.finish(json({'error': "Sign is error", 'rc': ErrorCode.ERRCODE_BIZ}))
             else:
                 file_path = Config.get('dir_' + path) + file_name
                 if os.path.isfile(file_path):
                     contents = self.read_file(file_path)
                     return json({'content': contents})
                 else:
-                    return json(
-                        {'error': "No such file in script path", 'rc': ErrorCode.ERRCODE_BIZ})
+                    return json({'error': "No such file in script path", 'rc': ErrorCode.ERRCODE_BIZ})
         else:
             return json(
                 {'error': "Wrong type in argument", 'rc': ErrorCode.ERRCODE_SYS})
@@ -247,10 +239,8 @@ class FileReadWrite(MyHttpView):
         sign = data.get('s', None)
         if not filename or not content or not sign or path \
                 not in ['script', 'playbook']:
-            return json(
-                {'error': "Lack of necessary parameters", 'rc': ErrorCode.ERRCODE_SYS})
-        hot_key = path + filename + Config.get('sign_key')
-        check_str = Tool.getmd5(hot_key)
+            return json({'error': "Lack of necessary parameters", 'rc': ErrorCode.ERRCODE_SYS})
+        check_str = Tool.encrypt_sign(path, filename, Config.get('sign_key'))
         if sign != check_str:
             return json({'error': "Sign is error", 'rc': ErrorCode.ERRCODE_BIZ})
         else:
@@ -279,11 +269,9 @@ class FileExist(MyHttpView):
         sign = request.args.get('sign', '')
         allows = ['script', 'playbook']
         if path in allows:
-            hot_key = path + file_name + Config.get('sign_key')
-            check_str = Tool.getmd5(hot_key)
+            check_str = Tool.encrypt_sign(path, file_name, Config.get('sign_key'))
             if sign != check_str:
-                return json(
-                    {'error': "Sign is error", 'rc': ErrorCode.ERRCODE_BIZ})
+                return json({'error': "Sign is error", 'rc': ErrorCode.ERRCODE_BIZ})
             else:
                 file_path = Config.get('dir_' + path) + file_name
                 Tool.LOGGER.info("file exist? " + file_path)
@@ -292,8 +280,7 @@ class FileExist(MyHttpView):
                 else:
                     return json({'ret': False})
         else:
-            return json(
-                {'error': "Wrong type in argument", 'rc': ErrorCode.ERRCODE_SYS})
+            return json({'error': "Wrong type in argument", 'rc': ErrorCode.ERRCODE_SYS})
 
 
 class ParseVarsFromFile(MyHttpView):
@@ -301,8 +288,7 @@ class ParseVarsFromFile(MyHttpView):
     async def get(self, request):
         file_name = request.args.get('name')
         sign = request.args.get('sign', '')
-        hot_key = file_name + Config.get('sign_key')
-        check_str = Tool.getmd5(hot_key)
+        check_str = Tool.encrypt_sign(file_name, Config.get('sign_key'))
         if sign != check_str:
             return json({'error': "Sign is error", 'rc': ErrorCode.ERRCODE_BIZ})
         else:
@@ -338,6 +324,18 @@ class ParseVarsFromFile(MyHttpView):
 
 class Message:
 
+    @staticmethod
+    def check_json(data):
+        try:
+            jdata = json_raw.loads(data)
+            return True, jdata
+        except ValueError:
+            return False, data
+
+    @staticmethod
+    def send_task(data):
+        print(data)
+
     async def websocket(request, ws):
         if ws.subprotocol is None:
             channel = RTM_CHANNEL_DEFAULT
@@ -346,6 +344,11 @@ class Message:
         RealTimeMessage.set(channel, ws)
         while True:
             data = await ws.recv()
-            msg = 'you say [%s] @%s: ' % (data, channel)
+            mode, input_data = Message.check_json(data)
+            if mode:
+                Message.send_task(input_data)
+                msg = json_raw.dumps(dict(task_accept=True))
+            else:
+                msg = 'you say [%s] @%s: ' % (data, channel)
             # print('--- websocket debug ---', msg)
             await ws.send(msg)

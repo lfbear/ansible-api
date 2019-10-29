@@ -19,6 +19,7 @@ class Config(object):
     host = '127.0.0.1'
     port = 8765
     sign_key = 'YOUR_SIGNATURE_KEY_HERE'
+    sign_mode = 'md5'
     log_path = '/var/log/ansible-api.log'
     allow_ip = []
     ws_sub = []
@@ -39,6 +40,7 @@ class Config(object):
             self.host = cf.get('default', 'host') if cf.has_option('default', 'host') else Config.host
             self.port = int(cf.get('default', 'port')) if cf.has_option('default', 'port') else Config.port
             self.sign_key = cf.get('default', 'sign_key') if cf.has_option('default', 'sign_key') else Config.sign_key
+            self.sign_mode = cf.get('default', 'sign_mode') if cf.has_option('default', 'sign_mode') else Config.sign_mode
             self.log_path = cf.get('default', 'log_path') if cf.has_option('default', 'log_path') else Config.log_path
             self.allow_ip = cf.get('default', 'allow_ip').split() if cf.has_option('default',
                                                                                    'allow_ip') else Config.allow_ip
@@ -57,6 +59,6 @@ class Config(object):
                                                                                  'playbook') else Config.dir_playbook
 
     @staticmethod
-    def get(attr):
+    def get(attr, default=''):
         cfg = Config()
-        return getattr(cfg, attr, '')
+        return getattr(cfg, attr, default)
