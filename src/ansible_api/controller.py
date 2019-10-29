@@ -103,9 +103,6 @@ class Command(MyHttpView):
                     loop = asyncio.get_running_loop()
                     with concurrent.futures.ThreadPoolExecutor() as pool:
                         response = await loop.run_in_executor(pool, self.run, target, name, module, arg, cb)
-                        # response = yield self.run(target, name, module, arg, cb)
-                        # response = self.run(target, name, module, arg, cb)
-                        print(cb.get_summary(), '-----')
                         return json(dict(rc=response.rc, detail=cb.get_summary()))
                 except Exception as e:
                     Tool.LOGGER.exception(e)
