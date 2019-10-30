@@ -44,7 +44,7 @@ class Reporter(object):
                     result['stderr'] = event_data.get('res', {}).get('stderr')
                 if 'msg' in event_data.get('res', {}):  # ansible level error
                     err_msg = event_data.get('res', {}).get('msg')
-                    if len(result['stderr']):
+                    if 'stderr' in result and len(result['stderr']):
                         result['stderr'] += " (%s)" % err_msg
                     else:
                         result['stderr'] = err_msg
@@ -62,27 +62,27 @@ class Reporter(object):
                 self._detail = result  # sync data to RESTful Api
             elif event == 'runner_on_start':  # ignore this event
                 Tool.LOGGER.debug('[event: runner_on_start] %s on hosts %s' %
-                                 (event_data.get('task'), event_data.get('host')))
+                                  (event_data.get('task'), event_data.get('host')))
                 return False
             elif event == 'runner_on_skipped':  # ignore this event
                 Tool.LOGGER.debug('[event: runner_on_skipped] %s on hosts %s' %
-                                 (event_data.get('task'), event_data.get('host')))
+                                  (event_data.get('task'), event_data.get('host')))
                 return False
             elif event == 'runner_retry':  # ignore this event
                 Tool.LOGGER.debug('[event: runner_retry] %s on hosts %s' %
-                                 (event_data.get('task'), event_data.get('host')))
+                                  (event_data.get('task'), event_data.get('host')))
                 return False
             elif event == 'runner_on_file_diff':  # ignore this event
                 Tool.LOGGER.debug('[event: runner_on_file_diff] %s on hosts %s' %
-                                 (event_data.get('task'), event_data.get('host')))
+                                  (event_data.get('task'), event_data.get('host')))
                 return False
             elif event == 'runner_item_on_failed':  # ignore this event
                 Tool.LOGGER.debug('[event: runner_item_on_failed] %s on hosts %s' %
-                                 (event_data.get('task'), event_data.get('host')))
+                                  (event_data.get('task'), event_data.get('host')))
                 return False
             elif event == 'runner_item_on_skipped':  # ignore this event
                 Tool.LOGGER.debug('[event: runner_item_on_skipped] %s on hosts %s' %
-                                 (event_data.get('task'), event_data.get('host')))
+                                  (event_data.get('task'), event_data.get('host')))
                 return False
             elif event == 'playbook_on_play_start':
                 result['type'] = 'play_start'
@@ -112,14 +112,14 @@ class Reporter(object):
                 return False
             elif event == 'playbook_on_notify':  # ignore this event
                 Tool.LOGGER.debug('[event: playbook_on_notify] %s at handler %s' %
-                                 (event_data.get('task'), event_data.get('handler')))
+                                  (event_data.get('task'), event_data.get('handler')))
                 return False
             elif event == 'playbook_on_vars_prompt':  # ignore this event
                 Tool.LOGGER.debug('[event: playbook_on_vars_prompt] varname = %s' % event_data.get('varname'))
                 return False
             elif event == 'playbook_on_handler_task_start':  # ignore this event
                 Tool.LOGGER.debug('[event: playbook_on_handler_task_start] %s at %s' %
-                                 (event_data.get('task'), event_data.get('name')))
+                                  (event_data.get('task'), event_data.get('name')))
                 return False
             elif event == 'playbook_on_no_hosts_matched':  # ignore this event
                 Tool.LOGGER.debug('[event: playbook_on_no_hosts_matched]')
