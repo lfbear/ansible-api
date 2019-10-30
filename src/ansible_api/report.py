@@ -133,7 +133,7 @@ class Reporter(object):
             # elif event == 'MORE EVENT NAME'
             # pass # --- you can add more event filter here ---
             else:
-                Tool.LOGGER.warn('[Unknown event name] %s' % result['event'])
+                Tool.LOGGER.info('[Unknown event name] %s' % result['event'])
                 return False
             # adorn custom contents
             if event in self._after:
