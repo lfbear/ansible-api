@@ -57,7 +57,7 @@ class Reporter(object):
                 result['res']['stderr'] = result['stderr'] = event_data.get('res', {}).get('msg')
                 self._detail = result  # sync data to RESTful Api
             elif event == 'runner_on_start':  # ignore this event
-                Tool.LOGGER.info('[event: runner_on_start] %s on hosts %s' %
+                Tool.LOGGER.debug('[event: runner_on_start] %s on hosts %s' %
                                  (event_data.get('task'), event_data.get('host')))
                 return False
             elif event == 'runner_on_skipped':  # ignore this event
