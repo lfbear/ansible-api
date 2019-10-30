@@ -43,7 +43,11 @@ class Reporter(object):
                 if 'stderr' in event_data.get('res', {}):
                     result['stderr'] = event_data.get('res', {}).get('stderr')
                 if 'msg' in event_data.get('res', {}):  # ansible level error
-                    result['stderr'] = event_data.get('res', {}).get('msg')
+                    err_msg = event_data.get('res', {}).get('msg')
+                    if len(result['stderr']):
+                        result['stderr'] += " (%s)" % err_msg
+                    else:
+                        result['stderr'] = err_msg
                 if 'stdout' in event_data.get('res', {}):
                     result['stdout'] = event_data.get('res', {}).get('stdout')
                 self._detail = result  # sync data to RESTful Api
