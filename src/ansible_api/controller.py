@@ -145,7 +145,8 @@ class Playbook(MyHttpView):
             if os.path.isfile(yml_file):
                 task_list = []
                 with open(yml_file, 'r') as contents:
-                    yaml_cnt = yaml.load(contents)
+                    # yaml_cnt = yaml.load(contents)
+                    yaml_cnt = yaml.full_load(contents)
                     if len(yaml_cnt) > 0 and len(yaml_cnt[0].get('tasks', [])) > 0:
                         task_list = [x.get('name', 'unnamed') for x in yaml_cnt[0]['tasks']]
                 Tool.LOGGER.info("playbook: {0}, host: {1}".format(yml_file, hosts))
